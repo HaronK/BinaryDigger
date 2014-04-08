@@ -13,7 +13,7 @@ Scripter (script based plugin) is also dynamic library which loads external scri
 
 ![Compiled plugin](images/BinaryDigger1.png "Compiled plugin")
 
-![Lua scripter](images/BinaryDigger1.png "Lua scripter")
+![Lua scripter](images/BinaryDigger2.png "Lua scripter")
 
 
 ## Development tools.
