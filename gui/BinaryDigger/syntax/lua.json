@@ -1,0 +1,62 @@
+{
+    "formats": {
+        "string": {
+            "fg": "darkGreen"
+        },
+        "comment": {
+            "fg": "red"
+        }
+    },
+    "regexps": {
+        "function": {
+            "italic": true,
+            "fg":     "blue",
+
+            "regexp": "\\b[A-Za-z0-9_]+(?=\\()"
+        }
+    },
+    "keywords": {
+        "Lua": {
+            "weight": "Bold",
+            "fg":     "darkBlue",
+
+            "list": ["and",       "break",     "do",        "else",      "elseif",    "end",
+                     "false",     "for",       "function",  "goto",      "if",        "in",
+                     "local",     "nil",       "not",       "or",        "repeat",    "return",
+                     "then",      "true",      "until",     "while"]
+        },
+        "BinaryDigger": {
+            "weight": "Bold",
+            "fg":     "darkCyan",
+
+            "list": ["templ", "char", "uchar", "word", "dword", "qword", "double"]
+        }
+    },
+    "comments": {
+        "string1": {
+            "format":     "string",
+
+            "beginRegexp": "\"",
+            "endRegexp":   "\""
+        },
+        "string2": {
+            "fg":     "darkGreen",
+
+            "beginRegexp": "'",
+            "endRegexp":   "'"
+        },
+
+        "singleLine": {
+            "fg": "red",
+
+            "beginRegexp": "--"
+        },
+        "multiLine": {
+            "fg": "red",
+
+            "multilined":  true,
+            "beginRegexp": "--\\[\\[",
+            "endRegexp":   "\\]\\]"
+        }
+    }
+}

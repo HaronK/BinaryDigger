@@ -1,0 +1,23 @@
+
+#set(CLANG_PATH                   "/home/oleg/Programs/llvm/")
+set(CLANG_BIN_PATH               "") #${CLANG_PATH}bin/")
+
+set(CMAKE_C_COMPILER             "${CLANG_BIN_PATH}clang")
+set(CMAKE_C_FLAGS                "-Wall -std=c99")
+set(CMAKE_C_FLAGS_DEBUG          "-g")
+set(CMAKE_C_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
+set(CMAKE_C_FLAGS_RELEASE        "-O4 -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
+
+set(CMAKE_CXX_COMPILER             "${CLANG_BIN_PATH}clang++")
+set(CMAKE_CXX_FLAGS                "-Wall -std=c++11 -stdlib=libc++ -v")
+set(CMAKE_CXX_FLAGS_DEBUG          "-g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE        "-O4 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+
+set(CMAKE_AR      "${CLANG_BIN_PATH}llvm-ar")
+set(CMAKE_LINKER  "${CLANG_BIN_PATH}llvm-ld")
+set(CMAKE_NM      "${CLANG_BIN_PATH}llvm-nm")
+set(CMAKE_OBJDUMP "${CLANG_BIN_PATH}llvm-objdump")
+set(CMAKE_RANLIB  "${CLANG_BIN_PATH}llvm-ranlib")

@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>default.txt</file>
+        <file>images/open.png</file>
+        <file>images/save.png</file>
+        <file>syntax/lua.json</file>
+    </qresource>
+</RCC>

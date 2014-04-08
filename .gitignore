@@ -1,0 +1,6 @@
+.Sync*
+.cproject
+.project
+.pydevproject
+build/*
+server
