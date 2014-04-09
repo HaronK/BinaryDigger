@@ -28,11 +28,11 @@ or on the Linux platforms you can use your package manager.
 
 ### Gui
 
-Open project in QtCreator and compile it (BinaryDigger/gui/BinaryDigger/gui/BinaryDigger.pro/).
+Open project in QtCreator and compile it (*BinaryDigger/gui/BinaryDigger/gui/BinaryDigger.pro*).
 
 ### Plugins
 
-Change *BinaryDigger_GuiBuildFolder* variable in BinaryDigger/CMakeLists.txt to point to Gui build folder on your system.
+Change *BinaryDigger_GuiBuildFolder* variable in *BinaryDigger/CMakeLists.txt* to point to Gui build folder on your system.
 
 ```
 cd BinaryDigger/build
