@@ -1,4 +1,4 @@
-# Instalation instruction
+# Installation instructions
 
 Currently binary packages are not provided. You can compile project from the source code.
 
