@@ -50,7 +50,11 @@ void SyntaxHighlighter::initFormatReference(const QJsonObject& templ, QTextCharF
         FormatsMap::const_iterator iter = formatsMap.find(name);
         if (iter != formatsMap.end())
         {
-            format = iter->second;
+//            format = iter->second; // FIXME: doesn't work. Why?
+
+            format.setFontWeight(iter->second.fontWeight());
+            format.setForeground(iter->second.foreground());
+            format.setFontItalic(iter->second.fontItalic());
         }
         else
         {
@@ -59,7 +63,7 @@ void SyntaxHighlighter::initFormatReference(const QJsonObject& templ, QTextCharF
     }
 }
 
-QFont::Weight SyntaxHighlighter::getWeight(const QJsonObject& templ, QFont::Weight def) const
+bool SyntaxHighlighter::getWeight(const QJsonObject& templ, QFont::Weight& res) const
 {
     if (templ.contains("weight"))
     {
@@ -69,13 +73,14 @@ QFont::Weight SyntaxHighlighter::getWeight(const QJsonObject& templ, QFont::Weig
         WeightsMap::const_iterator iter = weightsMap.find(weight);
         if (iter != weightsMap.end())
         {
-            return iter->second;
+            res = iter->second;
+            return true;
         }
     }
-    return def;
+    return false;
 }
 
-Qt::GlobalColor SyntaxHighlighter::getForeground(const QJsonObject& templ, Qt::GlobalColor def) const
+bool SyntaxHighlighter::getForeground(const QJsonObject& templ, Qt::GlobalColor& res) const
 {
     if (templ.contains("fg"))
     {
@@ -85,20 +90,22 @@ Qt::GlobalColor SyntaxHighlighter::getForeground(const QJsonObject& templ, Qt::G
         GlobalColorMap::const_iterator iter = globalColorMap.find(foreground);
         if (iter != globalColorMap.end())
         {
-            return iter->second;
+            res = iter->second;
+            return true;
         }
     }
-    return def;
+    return false;
 }
 
-bool SyntaxHighlighter::getItalic(const QJsonObject& templ, bool def) const
+bool SyntaxHighlighter::getItalic(const QJsonObject& templ, bool& res) const
 {
     if (templ.contains("italic"))
     {
         QJsonValue value = templ.value("italic");
-        return value.toBool(def);
+        res = value.toBool();
+        return true;
     }
-    return def;
+    return false;
 }
 
 void SyntaxHighlighter::setFormatObject(const QJsonObject& templ, QTextCharFormat& format)
@@ -106,9 +113,17 @@ void SyntaxHighlighter::setFormatObject(const QJsonObject& templ, QTextCharForma
     initFormatReference(templ, format);
 
     // TODO: set defaults properly
-    format.setFontWeight(getWeight(templ, QFont::Normal));
-    format.setForeground(getForeground(templ, Qt::black));
-    format.setFontItalic(getItalic(templ, false));
+    QFont::Weight weight = QFont::Normal;
+    if (getWeight(templ, weight))
+        format.setFontWeight(weight);
+
+    Qt::GlobalColor fg = Qt::black;
+    if (getForeground(templ, fg))
+        format.setForeground(fg);
+
+    bool italic = false;
+    if (getItalic(templ, italic))
+        format.setFontItalic(italic);
 }
 
 void SyntaxHighlighter::initFormatTemplate(const QString& name, const QJsonObject& templ)

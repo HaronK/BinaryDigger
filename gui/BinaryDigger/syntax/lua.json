@@ -7,6 +7,7 @@
             "fg": "red"
         }
     },
+
     "regexps": {
         "function": {
             "italic": true,
@@ -15,6 +16,7 @@
             "regexp": "\\b[A-Za-z0-9_]+(?=\\()"
         }
     },
+
     "keywords": {
         "Lua": {
             "weight": "Bold",
@@ -32,27 +34,28 @@
             "list": ["templ", "char", "uchar", "word", "dword", "qword", "double"]
         }
     },
+
     "comments": {
         "string1": {
-            "format":     "string",
+            "format": "string",
 
             "beginRegexp": "\"",
             "endRegexp":   "\""
         },
         "string2": {
-            "fg":     "darkGreen",
+            "format": "string",
 
             "beginRegexp": "'",
             "endRegexp":   "'"
         },
 
         "singleLine": {
-            "fg": "red",
+            "format": "comment",
 
             "beginRegexp": "--"
         },
         "multiLine": {
-            "fg": "red",
+            "format": "comment",
 
             "multilined":  true,
             "beginRegexp": "--\\[\\[",

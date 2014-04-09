@@ -27,9 +27,9 @@ class SyntaxHighlighter : public QSyntaxHighlighter
      GlobalColorMap globalColorMap;
 
      void initFormatReference(const QJsonObject& templ, QTextCharFormat& format);
-     QFont::Weight getWeight(const QJsonObject& templ, QFont::Weight def) const;
-     Qt::GlobalColor getForeground(const QJsonObject& templ, Qt::GlobalColor def) const;
-     bool getItalic(const QJsonObject& templ, bool def) const;
+     bool getWeight(const QJsonObject& templ, QFont::Weight& res) const;
+     bool getForeground(const QJsonObject& templ, Qt::GlobalColor& res) const;
+     bool getItalic(const QJsonObject& templ, bool& res) const;
 
      void setFormatObject(const QJsonObject& templ, QTextCharFormat& format);
 
