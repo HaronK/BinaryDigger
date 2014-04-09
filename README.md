@@ -23,6 +23,8 @@ Scripter (script based plugin) is also dynamic library which loads external scri
 - Scripting: Lua. Script has only read access to the hierarchy tree.
 - Build system: CMake.
 
+[Installation instructions](INSTALL.md).
+
 
 ## Versions features.
 
