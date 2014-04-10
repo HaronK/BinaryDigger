@@ -42,9 +42,53 @@ TEMPL(name, params...)
 TEMPL_END
 ```
 
+Where **name** is template name (without quotes) and **params** is parameters declaration similar to C-function parameters declaration.
+
+To declare and use template elements several macrosses and methods could be used:
+
+* **VAR** - simple element declaration.
+ 
+```cpp
+    VAR(WORD, size);
+```
+
+* **ARR** - array elemnt declaration.
+ 
+```cpp
+    ARR(CHAR, tag, 3);
+```
+
+* **VAL** - retrieve value of the POD element of the current template.
+ 
+```cpp
+    VAR(WORD,  entryNameLen);
+    ARR(CHAR,  entryName, VAL(entryNameLen));
+```
+
+* To access subelement use following approach:
+ 
+```cpp
+TEMPL(T1)
+    VAR(DWORD, len);
+TEMPL_END
+
+TEMPL(T2)
+    VAR(T1, t1);
+    DWORD_T = t1->item<DWORD>("len");
+TEMPL_END
+```
+
+* To get or set file position use **getPosition** and **setPosition** methods:
+ 
+```cpp
+    bd_u64 pos = getPosition(); // retrieve current position
+    setPosition(dataOffset);    // set new one
+    ARR(UCHAR, data, 10);       // read data at those position
+    setPosition(pos);           // return to the current position
+```
 
 
-There are predefined templates for the POD types: **CHAR**, **UCHAR**, **WORD**, **DWORD**, **QWORD** and **DOUBLE**.
+There are several predefined templates for the POD types: **CHAR**, **UCHAR**, **WORD**, **DWORD**, **QWORD** and **DOUBLE**.
 
 ### Scripters
 
