@@ -19,18 +19,40 @@ Scripter (script based plugin) is also dynamic library which loads external scri
 
 ### Modularity
 
-BD built around interface implemented by plugins. Gui is a standalone application that loads plugins and uses their functionality to *parse* binary data into hierarchical structures.
+BD is built around interface implemented by plugins. Gui is a standalone application that loads plugins and uses their functionality to parse binary data into hierarchical structures.
 Main requirement for the both parts of system (plugins and Gui) is supporting same interface.
 In this case plugins and Gui are independent and could be developed separately.
 
-### Plugins
+### Compiled plugins
 
+To add new compiled plugin just add new \*.cpp file into *BinaryDigger/plugins* folder and recompile project.
+For examples look into existing plugin files.
+
+#### Syntax
+
+Plugin contains templates and plugin definition.
+
+Template is defined by **TEMPL** and **TEMPL_END** macrosses.
+
+```cpp
+TEMPL(name, params...)
+
+    // C++ code and template fields definitions
+    ...
+TEMPL_END
+```
+
+
+
+There are predefined templates for the POD types: **CHAR**, **UCHAR**, **WORD**, **DWORD**, **QWORD** and **DOUBLE**.
+
+### Scripters
 
 
 ## Development tools.
 
 - GUI: Qt.
-- Plugins: plain C interface. C macroses to emulate 010 Editor templates.
+- Plugins: plain C interface. Macroses are used to specify data templates/structures.
 - Scripting: Lua. Script has only read access to the hierarchy tree.
 - Build system: CMake.
 
