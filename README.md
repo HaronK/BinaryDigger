@@ -15,6 +15,17 @@ Scripter (script based plugin) is also dynamic library which loads external scri
 
 ![Lua scripter](images/BinaryDigger2.png "Lua scripter")
 
+## Features
+
+### Modularity
+
+BD built around interface implemented by plugins. Gui is a standalone application that loads plugins and uses their functionality to *parse* binary data into hierarchical structures.
+Main requirement for the both parts of system (plugins and Gui) is supporting same interface.
+In this case plugins and Gui are independent and could be developed separately.
+
+### Plugins
+
+
 
 ## Development tools.
 
