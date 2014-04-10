@@ -90,7 +90,25 @@ TEMPL_END
 
 There are several predefined templates for the POD types: **CHAR**, **UCHAR**, **WORD**, **DWORD**, **QWORD** and **DOUBLE**.
 
+To make template available for using outside it should be registered:
+ 
+```cpp
+TEMPL(T1)
+    VAR(DWORD, len);
+TEMPL_END
+
+PLUGIN(T1Plugin)
+    TEMPL_REGISTER(T1);
+PLUGIN_END
+```
+
+There should be at least one registered plugin.
+
 ### Scripters
+
+#### Syntax highlighting
+
+#### Lua scripter
 
 
 ## Development tools.
