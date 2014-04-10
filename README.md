@@ -9,6 +9,8 @@ There are 2 different types of plugins: compiled and script based. Compiled plug
 specific interface for the main application to access hierarchical data.
 Scripter (script based plugin) is also dynamic library which loads external scripts to parse data.
 
+In current state Gui supports only view mode for data file.
+
 ## Screenshots
 
 ![Compiled plugin](images/BinaryDigger1.png "Compiled plugin")
@@ -106,7 +108,26 @@ There should be at least one registered plugin.
 
 ### Scripters
 
+Scripter (scripting plugin) doesn't provide any hardcoded templates. It uses script to generate parsed tree.
+
+Gui application supports configurable highlighting in the script editor window.
+
+> In current state Gui supports highlighting file only for Lua. This will be fixed in the future.
+
 #### Syntax highlighting
+
+Syntax highlighting subsytem uses Json format for configuration files. See example in [lua.json](gui/BinaryDigger/syntax/lua.json) file.
+
+Configuration can contain several sections:
+
+1. **regexps** - generic regular expression mappers. Each subelement contains:
+
+2. **keywords** -
+
+3. **comments** - 
+
+4. **formats** -
+
 
 #### Lua scripter
 
