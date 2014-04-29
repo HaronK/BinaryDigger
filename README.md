@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/haronk/binarydigger.png?label=ready&title=Ready)](https://waffle.io/haronk/binarydigger)
 # Binary Digger
 
 ## Introduction
