@@ -11,6 +11,15 @@
 #include <QMessageBox>
 #include <QException>
 
+#define BD_CHECK(plugin, func, msg) \
+    bd_result res = plugin.func; \
+    if (!BD_SUCCEED(res)) { \
+        char buf[1024]; \
+        plugin.result_message(res, (bd_string) buf, sizeof(buf)); \
+        throw BDException(tr("%1\n%2").arg(msg).arg(buf)); \
+    }
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -37,7 +46,14 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    freeTemplate(rootItem);
+    try
+    {
+        freeTemplate(rootItem);
+    }
+    catch (const BDException &ex)
+    {
+        QMessageBox::warning(this, tr("Plugin: "), tr(ex.what()), QMessageBox::Ok);
+    }
 
     for (int i = 0; i < plugins.size(); ++i)
     {
@@ -134,8 +150,7 @@ void MainWindow::initializePlugin(PluginLibrary &pl)
     bd_string name = 0;
     bd_u32 templ_count;
 
-    if (!BD_SUCCEED(pl.plugin.initialize_plugin(&name, &templ_count)))
-        throw BDException(tr("Cannot initialize plugin"));
+    BD_CHECK(pl.plugin, initialize_plugin(&name, &templ_count), tr("Cannot initialize plugin"));
 
     pl.pluginName = name;
     pl.isScripter = templ_count == 0;
@@ -143,8 +158,7 @@ void MainWindow::initializePlugin(PluginLibrary &pl)
     for (bd_u32 i = 0; i < templ_count; ++i)
     {
         bd_string name;
-        if (!BD_SUCCEED(pl.plugin.template_name(i, (bd_string*)&name)))
-            throw BDException(tr("Cannot retrieve template name: %1").arg(i));
+        BD_CHECK(pl.plugin, template_name(i, (bd_string*)&name), tr("Cannot retrieve template name: %1").arg(i));
 
         pl.templates << name;
     }
@@ -172,9 +186,10 @@ void MainWindow::applyTemplate(bd_item *item)
         script = curScriptFile.toStdString(); //scriptWidget->toPlainText().toLatin1().data();
 
     templBlob.dataFile->seek(0);
-    if (!BD_SUCCEED(plugins[pluginIndex].plugin.apply_template(templIndex, &templBlob, &item,
-                                                               script.empty() ? 0 :(bd_cstring) script.c_str())))
-        throw BDException(tr("Could not apply template 0"));
+
+    BD_CHECK(plugins[pluginIndex].plugin,
+             apply_template(templIndex, &templBlob, &item, script.empty() ? 0 :(bd_cstring) script.c_str()),
+             tr("Could not apply template 0"));
 
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template applied successfully."), QMessageBox::Ok);
 
@@ -208,8 +223,7 @@ void MainWindow::freeTemplate(bd_item *item)
 
 void MainWindow::finalizePlugin(PluginLibrary &pl)
 {
-    if (!BD_SUCCEED(pl.plugin.finalize_plugin()))
-        throw BDException(tr("Could not finalize plugin."));
+    BD_CHECK(pl.plugin, finalize_plugin(), tr("Could not finalize plugin."));
 
 //        QMessageBox::information(this, tr("Plugin: ") + pl.file, tr("Plugin successfully finalized."), QMessageBox::Ok);
 }
@@ -243,7 +257,14 @@ void MainWindow::pluginTemplActivated()
     pluginIndex = curItem->data(Qt::UserRole + 1).toInt();
     templIndex = curItem->data(Qt::UserRole + 2).toInt();
 
-    applyTemplate(rootItem);
+    try
+    {
+        applyTemplate(rootItem);
+    }
+    catch (const BDException& ex)
+    {
+        QMessageBox::warning(this, tr("Template: ") + curItem->text(), tr(ex.what()), QMessageBox::Ok);
+    }
 }
 
 void MainWindow::resizeTreeColumns()

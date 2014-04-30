@@ -132,17 +132,19 @@ FileTemplBlob::~FileTemplBlob()
     bd_result res = plugin.func; \
     if (!BD_SUCCEED(res)) {\
         char buf[1024]; \
-        plugin.result_message(res, (bd_string) buf, 1024); \
-        throw Poco::Exception(Poco::format("Error:\n  %s\n  %s", std::string(msg), std::string(buf))); \
+        plugin.result_message(res, (bd_string) buf, sizeof(buf)); \
+        _errorMessage = Poco::format("Error:\n  %s\n  %s", std::string(msg), std::string(buf)); \
+        return res; \
     } }
 
 #define DT_EXEC_CHECK_F(plugin, func, msg, ...) {\
     bd_result res = plugin.func; \
     if (!BD_SUCCEED(res)) {\
         char buf[1024]; \
-        plugin.result_message(res, (bd_string) buf, 1024); \
+        plugin.result_message(res, (bd_string) buf, sizeof(buf)); \
         std::string err_msg = Poco::format(msg, __VA_ARGS__); \
-        throw Poco::Exception(Poco::format("Error:\n  %s\n  %s", err_msg, std::string(buf))); \
+        _errorMessage = Poco::format("Error:\n  %s\n  %s", err_msg, std::string(buf)); \
+        return res; \
     } }
 
 
@@ -313,7 +315,7 @@ protected:
         plugin.finalize_plugin   = (bd_finalize_plugin_t)   pluginLibrary.getSymbol("bd_finalize_plugin");
     }
 
-    void initializePlugin(PluginInfo& pluginInfo)
+    bd_result initializePlugin(PluginInfo& pluginInfo)
     {
         bd_string name = 0;
         bd_u32 templ_count;
@@ -330,6 +332,8 @@ protected:
 
             pluginInfo.templates.push_back(name);
         }
+
+        return BD_SUCCESS;
     }
 
     void showPluginInfo(PluginInfo& pluginInfo)
@@ -344,12 +348,14 @@ protected:
         }
     }
 
-    void finalizePlugin(PluginInfo& pluginInfo)
+    bd_result finalizePlugin(PluginInfo& pluginInfo)
     {
         DT_EXEC_CHECK(pluginInfo.plugin, finalize_plugin(), "Could not finalize plugin");
+
+        return BD_SUCCESS;
     }
 
-    void applyTemplate(PluginInfo& pluginInfo, FileTemplBlob& templBlob, bd_item **item)
+    bd_result applyTemplate(PluginInfo& pluginInfo, FileTemplBlob& templBlob, bd_item **item)
     {
         freeTemplate(pluginInfo, *item);
 
@@ -361,17 +367,21 @@ protected:
         DT_EXEC_CHECK_F(pluginInfo.plugin,
                 apply_template(templIndex, &templBlob, item, _scriptFile.empty() ? 0 : (bd_cstring) _scriptFile.c_str()),
                 "Could not apply template %u", templIndex);
+
+        return BD_SUCCESS;
     }
 
-    void freeTemplate(PluginInfo& pluginInfo, bd_item *item)
+    bd_result freeTemplate(PluginInfo& pluginInfo, bd_item *item)
     {
         if (item == 0)
-            return;
+            return BD_SUCCESS;
 
         // TODO: set correct template index
         bd_u32 templIndex = 0;
 
         DT_EXEC_CHECK_F(pluginInfo.plugin, free_template(templIndex, item), "Could not free template %u", templIndex);
+
+        return BD_SUCCESS;
     }
 
     void dumpTree(std::ostream& output, FileTemplBlob& templBlob, const bd_item *item, const std::string& indent = "")
@@ -431,7 +441,11 @@ protected:
 
         loadPluginFunctions(pluginLibrary, pluginInfo.plugin);
 
-        initializePlugin(pluginInfo);
+        if (!BD_SUCCEED(initializePlugin(pluginInfo)))
+        {
+            poco_error(logger(), _errorMessage);
+            return Application::EXIT_DATAERR;
+        }
 
         if (_showPluginInfo)
         {
@@ -447,31 +461,29 @@ protected:
                 bd_item *item = NULL;
 
                 // 1. Apply plugin to the file
-                try
+                if (!BD_SUCCEED(applyTemplate(pluginInfo, templBlob, &item)))
                 {
-                    applyTemplate(pluginInfo, templBlob, &item);
-                }
-                catch (const std::exception& ex)
-                {
-                    poco_error(logger(), ex.what());
+                    poco_error(logger(), _errorMessage);
+                    return Application::EXIT_DATAERR;
                 }
 
                 // 2. Dump tree hierarchy
                 dumpTree(std::cout, templBlob, item);
 
                 // 3. Cleanup tree
-                try
+                if (!BD_SUCCEED(freeTemplate(pluginInfo, item)))
                 {
-                    freeTemplate(pluginInfo, item);
-                }
-                catch (const std::exception& ex)
-                {
-                    poco_error(logger(), ex.what());
+                    poco_error(logger(), _errorMessage);
+                    return Application::EXIT_DATAERR;
                 }
             }
         }
 
-        finalizePlugin(pluginInfo);
+        if (!BD_SUCCEED(finalizePlugin(pluginInfo)))
+        {
+            poco_error(logger(), _errorMessage);
+            return Application::EXIT_DATAERR;
+        }
 
 //        logger().information("Arguments to main():");
 //        for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
@@ -513,6 +525,8 @@ protected:
 private:
     bool _helpRequested;
     bool _showPluginInfo;
+
+    std::string _errorMessage;
 
     std::string _pluginName;
     std::string _pluginDir;
