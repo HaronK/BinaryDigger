@@ -11,12 +11,12 @@ templ{"NpkFileEntry", function(dataOffset)
     dword{"entryNameLen"}
     char{"entryName", entryNameLen}
 
-    local pos = root:getPosition()
-    root:setPosition(dataOffset + entryFileOffset)
+    local pos = bd:getPosition()
+    bd:setPosition(dataOffset + entryFileOffset)
     
     uchar{"data", entryFileLength}
     
-    root:setPosition(pos)
+    bd:setPosition(pos)
 end}
 
 --function NpkEntry(dataOffset) end
@@ -54,8 +54,8 @@ end}
 
 templ{"Npk", function()
     NpkHeader{"npkHeader"}
-    NpkEntry{"npkEntries", {npkHeader["dataOffset"] + 8}, open = true}
-    NpkDataHeader{"npkDataHeader"}
+    NpkEntry{"npkEntries", {self.npkHeader["dataOffset"] + 8}, open = true}
+--    NpkDataHeader{"npkDataHeader"}
 end}
 
 Npk{"npk"}

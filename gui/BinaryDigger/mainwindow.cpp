@@ -116,6 +116,10 @@ void MainWindow::loadPlugins()
     QFileInfoList allFiles = pluginsFolder.entryInfoList(nameFilter, QDir::Files);
 
     plugins.resize(allFiles.size());
+
+    if (allFiles.size() == 0)
+        throw BDException(tr("There are no plugins in %1").arg(pluginsFolder.absolutePath()));
+
     int pluginIndex = 0;
     for (QFileInfoList::iterator iter = allFiles.begin(); iter != allFiles.end(); ++iter)
     {

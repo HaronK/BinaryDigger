@@ -87,9 +87,9 @@ LuaTempl* getGlobalLuaTemplate(lua_State* L, const char* name)
 
 void setRootTempl(lua_State* L, LuaTempl* templ)
 {
-//    bd_require_eq(luabind::globals(L)["root"], luabind::nil, "Root object already exists");
+//    bd_require_eq(luabind::globals(L)["bd"], luabind::nil, "Root object already exists");
 
-    luabind::globals(L)["root"] = (DefaultTemplBase*) templ;
+    luabind::globals(L)["bd"] = (DefaultTemplBase*) templ;
 }
 
 LuaTempl* getCurrentTempl(lua_State* L)
@@ -160,6 +160,9 @@ void apply_templ_func(lua_State* L, LuaTempl* templ, const char* func_name, cons
     luabind::call_function<void>(L, func_name, params);
 
     luabind::globals(L)["cur_templ"] = prev;
+
+    // set correct template size
+    templ->size = templ->getPosition() - templ->offset;
 
 //    std::cout << "  applied\n";
 }
@@ -298,7 +301,7 @@ bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring s
         register_simple_templ<DOUBLE>("double")
     ];
 
-    LuaTempl* templ = new LuaTempl(blob, (bd_cstring) "root", (bd_cstring) "LuaScript", 0, 0);
+    LuaTempl* templ = new LuaTempl(blob, (bd_cstring) "bd", (bd_cstring) "LuaScript", 0, 0);
 
     setRootTempl(L, templ);
     setCurrentTempl(L, templ);
@@ -307,6 +310,10 @@ bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring s
 
     // load and run lua script file
     int rc = luaL_dofile(L, script);
+
+    // set correct template size
+    templ->size = templ->getPosition() - templ->offset;
+
     bd_require_ne_f(rc, 1, "Cannot load or run Lua file: %s\nLua error: %s",
             std::string(script), std::string(lua_tostring(L, -1)));
 

@@ -42,9 +42,8 @@
     TEMPL_DECL(templ_name, __VA_ARGS__) \
     TEMPL_IMPL(templ_name, __VA_ARGS__)
 
-#define TEMPL_END                     \
-        bd_u64 __pos = getPosition(); \
-        this->size = __pos - this->offset; }
+#define TEMPL_END \
+    this->size = getPosition() - this->offset; }
 
 // -----------------------------------------------------------------------------------------
 // Plugin

@@ -21,17 +21,29 @@
 class DefaultTemplException : public std::exception
 {
 public:
-    DefaultTemplException(bd_result result, const std::string& msg) : result(result), message(msg) {}
+    DefaultTemplException(bd_result result, const std::string& msg) : result(result), message(msg)
+    {}
 
-    DefaultTemplException(const std::string& msg) : result(BD_EUSER), message(msg) {}
+    DefaultTemplException(const std::string& msg) : result(BD_EUSER), message(msg)
+    {}
 
-    ~DefaultTemplException() _GLIBCXX_USE_NOEXCEPT {}
+    ~DefaultTemplException() throw()
+    {}
 
-    bd_result getResult() const { return result; }
+    bd_result getResult() const
+    {
+        return result;
+    }
 
-    const char* getMessage() const { return message.c_str(); }
+    const char* getMessage() const
+    {
+        return message.c_str();
+    }
 
-    const char* what() const _GLIBCXX_USE_NOEXCEPT { return message.c_str(); }
+    const char* what() const throw()
+    {
+        return message.c_str();
+    }
 
 private:
     bd_result result;
