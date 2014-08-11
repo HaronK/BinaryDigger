@@ -51,8 +51,8 @@ foreach(plugin_file ${plugins})
     add_custom_command(TARGET ${plugin_name} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy
                            $<TARGET_FILE:${plugin_name}>
-                           "${BinaryDigger_GuiBuildFolder}"
-                       COMMENT "${plugin_name} copied to ${HierarchDiggerGuiBuildPath}"
+                           "${BinaryDigger_PluginsFolder}"
+                       COMMENT "${plugin_name} copied to ${BinaryDigger_PluginsFolder}"
                       )
 endforeach()
 

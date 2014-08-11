@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 # ----------------------------------------------------------------------------------------
+
 project(BinaryDigger)
 
 #set(CMAKE_USER_MAKE_RULES_OVERRIDE CMakeClang.txt)
@@ -20,11 +21,10 @@ if(NOT Poco_FOUND)
 endif()
 
 # ----------------------------------------------------------------------------------------
-math(EXPR PLATFORM_BITS "${CMAKE_SIZEOF_VOID_P} * 8")
-set(BinaryDigger_GuiBuildFolder
-    "${BinaryDigger_BINARY_DIR}/build-BinaryDigger-Desktop_Qt_5_2_1_GCC_${PLATFORM_BITS}bit-${CMAKE_BUILD_TYPE}/plugins/")
+set(BinaryDigger_PackageFolder "${BinaryDigger_BINARY_DIR}/package/")
+set(BinaryDigger_PluginsFolder "${BinaryDigger_PackageFolder}/plugins/")
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BinaryDigger_GuiBuildFolder})
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BinaryDigger_PluginsFolder})
 # ----------------------------------------------------------------------------------------
 
 include_directories("${BinaryDigger_SOURCE_DIR}/include" ${Poco_INCLUDE_DIR})
@@ -37,7 +37,7 @@ SET(bd_default_plugin_FORCE_LINK -Wl,--whole-archive bd_default_plugin -Wl,--no-
 # Build subdirectories.
 add_subdirectory(include)
 add_subdirectory(default_plugin)
-#add_subdirectory(gui)
+add_subdirectory(gui)
 add_subdirectory(plugins)
 add_subdirectory(scripters)
 add_subdirectory(tests)

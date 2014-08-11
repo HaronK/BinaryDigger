@@ -19,6 +19,8 @@ extern "C" {
 
 #include <default_plugin.h>
 
+#define DEBUG_OUTPUT(msg) std::cout << msg
+//#define DEBUG_OUTPUT(msg)
 
 class LuaTempl: public DefaultTempl<LuaTempl>
 {
@@ -80,11 +82,6 @@ T getGlobalVariable(lua_State* L, const char* name)
     return luabind::object_cast<T>(luabind::globals(L)[name]);
 }
 
-LuaTempl* getGlobalLuaTemplate(lua_State* L, const char* name)
-{
-    return (LuaTempl*) getGlobalVariable<DefaultTemplBase*>(L, name);
-}
-
 void setRootTempl(lua_State* L, LuaTempl* templ)
 {
 //    bd_require_eq(luabind::globals(L)["bd"], luabind::nil, "Root object already exists");
@@ -94,19 +91,19 @@ void setRootTempl(lua_State* L, LuaTempl* templ)
 
 LuaTempl* getCurrentTempl(lua_State* L)
 {
-    return getGlobalLuaTemplate(L, "cur_templ");
+    return (LuaTempl*) getGlobalVariable<DefaultTemplBase*>(L, "self");
 }
 
 luabind::object setCurrentTempl(lua_State* L, LuaTempl* templ)
 {
-    luabind::object prev = luabind::globals(L)["cur_templ"];
-    luabind::globals(L)["cur_templ"] = (DefaultTemplBase*) templ;
+    luabind::object prev = luabind::globals(L)["self"];
+    luabind::globals(L)["self"] = (DefaultTemplBase*) templ;
     return prev;
 }
 
 void registerTemplVariable(lua_State* L, DefaultTemplBase* templ, const std::string& var_name)
 {
-    luabind::object cur_obj = luabind::globals(L)["cur_templ"];
+    luabind::object cur_obj = luabind::globals(L)["self"];
 
     // TODO: check variable duplication
 //    bd_require_eq_f(cur_obj[var_name.c_str()], luabind::nil, "Object %s::%s already contains variable %s",
@@ -134,7 +131,7 @@ void parse_apply_templ_params(const luabind::object& data, std::string& var_name
     bd_require_lua_type(LUA_TTABLE,  data);
     bd_require_lua_type(LUA_TSTRING, data[1]);
 
-//    std::cout << "Data: " << tostring(data) << "\n";
+    DEBUG_OUTPUT("Data: " << tostring(data) << "\n");
 
     var_name = luabind::object_cast<std::string>(data[1]);
 
@@ -153,21 +150,21 @@ void parse_apply_templ_params(const luabind::object& data, std::string& var_name
 
 void apply_templ_func(lua_State* L, LuaTempl* templ, const char* func_name, const luabind::object& params)
 {
-//    std::cout << "Apply templ func " << templ->type_name << "::" << templ->name << "." << func_name << " ...\n";
+    DEBUG_OUTPUT("Apply templ func " << templ->type_name << "::" << templ->name << "." << func_name << " ...\n");
 
     luabind::object prev = setCurrentTempl(L, templ);
 
     luabind::call_function<void>(L, func_name, params);
 
-    luabind::globals(L)["cur_templ"] = prev;
+    luabind::globals(L)["self"] = prev;
 
     // set correct template size
     templ->size = templ->getPosition() - templ->offset;
 
-//    std::cout << "  applied\n";
+    DEBUG_OUTPUT("  applied\n");
 }
 
-void apply_templ(const luabind::object& data)
+int apply_templ(const luabind::object& data)
 {
     std::string var_name;
     int arr_size = 0;
@@ -181,7 +178,7 @@ void apply_templ(const luabind::object& data)
     std::string templ_name;
     getLuaCurrentFunctionName(L, templ_name);
 
-//    std::cout << "Apply templ " << templ_name << "::" << var_name << " ...\n";
+    DEBUG_OUTPUT("Apply templ " << templ_name << "::" << var_name << " ...\n");
 
     LuaTempl* cur_templ = getCurrentTempl(L);
     bd_require_not_null(cur_templ, "Current template is null");
@@ -201,7 +198,9 @@ void apply_templ(const luabind::object& data)
 
     apply_templ_func(L, templ, templ_func.c_str(), params);
 
-//    std::cout << "  applied\n";
+    DEBUG_OUTPUT("  applied\n");
+
+    return 10;
 }
 
 /**
@@ -223,7 +222,7 @@ void register_templ(const luabind::object& data)
 
     lua_State* L = func.interpreter();
 
-//    std::cout << "Create templ " << templ_name << " ...";
+    DEBUG_OUTPUT("Create templ " << templ_name << " ...");
 
     // TODO: check that template with the same name doesn't already exist
     luabind::module(L)
@@ -239,7 +238,7 @@ void register_templ(const luabind::object& data)
     std::string templ_params = templ_name + "_settings";
     luabind::globals(L)[templ_params] = data;
 
-//    std::cout << "  created\n";
+    DEBUG_OUTPUT("  created\n");
 }
 
 template<class T>
@@ -256,7 +255,7 @@ void apply_simple_templ(const luabind::object& data)
     LuaTempl* cur_templ = getCurrentTempl(L);
     bd_require_not_null(cur_templ, "Current template is null");
 
-//    std::cout << "Apply simple templ " << typeid(T).name() << "." << var_name << " ...";
+    DEBUG_OUTPUT("Apply simple templ " << typeid(T).name() << "." << var_name << " ...");
 
     // TODO: apply local template settings that are defined in 'data' table as named elements
 
@@ -264,7 +263,7 @@ void apply_simple_templ(const luabind::object& data)
 
     registerTemplVariable(L, templ, var_name);
 
-//    std::cout << "  applied\n";
+    DEBUG_OUTPUT("  applied\n");
 }
 
 template<class T>
@@ -283,6 +282,8 @@ bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring s
 
     // Connect LuaBind to this lua state
     luabind::open(L);
+
+//    luaopen_base(L);
 
     // scripter default functions
     luabind::module(L)
@@ -306,7 +307,7 @@ bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring s
     setRootTempl(L, templ);
     setCurrentTempl(L, templ);
 
-//    std::cout << "Globals: " << tostring(luabind::globals(L)) << "\n";
+    DEBUG_OUTPUT("Globals: " << tostring(luabind::globals(L)) << "\n");
 
     // load and run lua script file
     int rc = luaL_dofile(L, script);

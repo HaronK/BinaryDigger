@@ -12,11 +12,13 @@ Gui part of the BinaryDigger is QtCreator project. Download and install it from 
 
 ### PocoProject
 
-Plugin system depends on [PocoProject](http://pocoproject.org/). Download and install it from [here](http://pocoproject.org/download/index.html).
+Plugin system depends on [PocoProject](http://pocoproject.org/). Download and install it from
+[here](http://pocoproject.org/download/index.html).
 
 ### Lua and LuaBind
 
-LuaScripter plugin depends on [Lua](http://www.lua.org/) and [Luabind](http://www.rasterbar.com/products/luabind.html). You can download and install them from here:
+LuaScripter plugin depends on [Lua](http://www.lua.org/) and [Luabind](http://www.rasterbar.com/products/luabind.html).
+You can download and install them from here:
 
 * [Download Lua](http://www.lua.org/download.html)
 

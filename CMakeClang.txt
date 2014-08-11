@@ -1,5 +1,5 @@
 
-#set(CLANG_PATH                   "/home/oleg/Programs/llvm/")
+#set(CLANG_PATH                   "~/Programs/llvm/")
 set(CLANG_BIN_PATH               "") #${CLANG_PATH}bin/")
 
 set(CMAKE_C_COMPILER             "${CLANG_BIN_PATH}clang")

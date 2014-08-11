@@ -145,12 +145,12 @@ bd_u64 calc_item_tree_size(const bd_item *item)
 const char *single_indent = "  ";
 void dump_item(const bd_item *item, const std::string& indent = "")
 {
-    printf("%-7s %-15s<%d>: %8llXh %6llXh",
+    printf("%-7s %-15s<%d>: %8lXh %6lXh",
             item->type_name, item->name, item->children.count,
             item->offset, (item->size * item->count));
     if (item->is_array)
     {
-        printf(" [%llu %u]", item->size, item->count);
+        printf(" [%lu %u]", item->size, item->count);
     }
     printf("\n");
     if (item->children.count > 0)
