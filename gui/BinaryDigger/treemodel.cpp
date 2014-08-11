@@ -222,15 +222,16 @@ void TreeModel::generateModelData(const bd_item *item, bd_u32 index, TreeItem<Us
 
     if (item->is_array)
     {
-        str.sprintf("%s %s[%d]", item->type_name, item->name, index == (bd_u32)-1 ? item->count : index);
+        str.sprintf("%s[%d]", item->name, index == (bd_u32)-1 ? item->count : index);
     }
     else
     {
-        str.sprintf("%s %s", item->type_name, item->name);
+        str.sprintf("%s", item->name);
     }
-    child->setData(0, str); // Name
-    child->setData(2, str.sprintf("%lXh", item->offset));                  // Start
-    child->setData(3, str.sprintf("%lXh", item->size));                    // Size
+    child->setData(0, str);                               // Name
+    child->setData(2, item->type_name);                   // Type
+    child->setData(3, str.sprintf("%lXh", item->offset)); // Start
+    child->setData(4, str.sprintf("%lXh", item->size));   // Size
 
     if (item->is_array == BD_TRUE && index == (bd_u32)-1 && item->type != BD_IT_CHAR)
     {

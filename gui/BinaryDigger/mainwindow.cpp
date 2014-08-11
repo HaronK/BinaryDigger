@@ -28,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     pluginIndex = -1;
     templIndex = 0;
     rootItem = 0;
-    treeModelHeaders << tr("Name") << tr("Value") << tr("Start") << tr("Size");
+    treeModelHeaders << tr("Name") << tr("Value") << tr("Type") << tr("Start") << tr("Size");
 
     try
     {
