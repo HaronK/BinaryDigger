@@ -1,8 +1,4 @@
-[![Backlog](https://badge.waffle.io/haronk/binarydigger.png?label=backlog&title=Backlog)](https://waffle.io/haronk/binarydigger)
-[![Stories in Ready](https://badge.waffle.io/haronk/binarydigger.svg?label=ready&title=Ready)](http://waffle.io/haronk/binarydigger)
-[![In Progress](https://badge.waffle.io/haronk/binarydigger.svg?label=in%20progress&title=In%20Progress)](http://waffle.io/haronk/binarydigger)
-[![Done](https://badge.waffle.io/haronk/binarydigger.svg?label=done&title=Done)](http://waffle.io/haronk/binarydigger)
-
+[![Stories in Ready](https://badge.waffle.io/haronk/binarydigger.png?label=ready&title=Ready)](https://waffle.io/haronk/binarydigger)
 # Binary Digger
 
 ## Introduction
