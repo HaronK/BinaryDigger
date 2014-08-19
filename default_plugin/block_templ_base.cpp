@@ -1,11 +1,11 @@
 /*
- * default_templ_base.cpp
+ * block_templ_base.cpp
  *
  *  Created on: Jul 14, 2013
  *      Author: oleg
  */
 
-#include "default_templ_base.h"
+#include "block_templ_base.h"
 
 BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstring _type_name, bd_block_type _type,
         bd_u64 _size, bd_u32 _count, BlockTemplBase *_parent)

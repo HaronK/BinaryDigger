@@ -8,7 +8,7 @@
 #ifndef HIERARCHYDIGGERMACRO_H_
 #define HIERARCHYDIGGERMACRO_H_
 
-#include "default_templ_base.h"
+#include "block_templ_base.h"
 
 #define VAL(var) var->value()
 #define GET(obj, type, field) const type::value_type field = obj->block<type>(#field).value()

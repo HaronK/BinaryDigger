@@ -1,5 +1,5 @@
 /*
- * default_templ_base.h
+ * block_templ_base.h
  *
  *  Created on: Jul 13, 2013
  *      Author: oleg
