@@ -37,7 +37,7 @@ TEMPL(NpkDirEntry, int dataOffset)
     while (true)
     {
         VAR(NpkEntry, entry, dataOffset); // <open=true>;
-        if (entry->item<CHAR>("tag") == "DNED")
+        if (entry->block<CHAR>("tag") == "DNED")
             break;
         subEntriesCount++;
     }

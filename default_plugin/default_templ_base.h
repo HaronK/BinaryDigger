@@ -18,16 +18,16 @@
 
 #include <Poco/Format.h>
 
-class DefaultTemplException : public std::exception
+class BlockTemplException : public std::exception
 {
 public:
-    DefaultTemplException(bd_result result, const std::string& msg) : result(result), message(msg)
+    BlockTemplException(bd_result result, const std::string& msg) : result(result), message(msg)
     {}
 
-    DefaultTemplException(const std::string& msg) : result(BD_EUSER), message(msg)
+    BlockTemplException(const std::string& msg) : result(BD_EUSER), message(msg)
     {}
 
-    ~DefaultTemplException() throw()
+    ~BlockTemplException() throw()
     {}
 
     bd_result getResult() const
@@ -50,10 +50,10 @@ private:
     std::string message;
 };
 
-#define bd_throw(msg) throw DefaultTemplException(msg)
+#define bd_throw(msg)        throw BlockTemplException(msg)
 #define bd_throw_f(msg, ...) bd_throw(Poco::format(msg, __VA_ARGS__))
 
-#define bd_require_true(cond, msg) if (!(cond)) bd_throw(msg)
+#define bd_require_true(cond, msg)  if (!(cond)) bd_throw(msg)
 #define bd_require_false(cond, msg) if (cond) bd_throw(msg)
 
 #define bd_require_is_null(cond, msg)  bd_require_true(cond == 0, msg)
@@ -62,7 +62,7 @@ private:
 #define bd_require_eq(v1, v2, msg) bd_require_true(v1 == v2, msg)
 #define bd_require_ne(v1, v2, msg) bd_require_true(v1 != v2, msg)
 
-#define bd_require_true_f(cond, msg, ...) if (!(cond)) bd_throw_f(msg, __VA_ARGS__)
+#define bd_require_true_f(cond, msg, ...)  if (!(cond)) bd_throw_f(msg, __VA_ARGS__)
 #define bd_require_false_f(cond, msg, ...) if (cond) bd_throw_f(msg, __VA_ARGS__)
 
 #define bd_require_is_null_f(cond, msg, ...)  bd_require_true_f(cond == 0, msg, __VA_ARGS__)
@@ -79,13 +79,13 @@ private:
     bd_result res = result;                   \
     bd_require_true_f(BD_SUCCEED(res), msg, ## __VA_ARGS__); }
 
-class DefaultTemplBase : public bd_item
+class BlockTemplBase : public bd_block
 {
 public:
-    DefaultTemplBase(bd_templ_blob *_blob, bd_cstring _name, bd_cstring _type_name, bd_item_type _type, bd_u64 _size,
-            bd_u32 _count, DefaultTemplBase *_parent);
+    BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstring _type_name, bd_block_type _type, bd_u64 _size,
+            bd_u32 _count, BlockTemplBase *_parent);
 
-    ~DefaultTemplBase();
+    ~BlockTemplBase();
 
     bd_u64 getSize() const
     {
@@ -95,21 +95,21 @@ public:
     bd_u64 getPosition()
     {
         bd_u64 result;
-        bd_result_throw(blob->get_pos(blob, &result), "Cannot get position");
+        bd_result_throw(block_io->get_pos(block_io, &result), "Cannot get position");
         return result;
     }
 
     void setPosition(bd_u64 pos)
     {
-        bd_result_throw_f(blob->set_pos(blob, pos), "Cannot set position %llu", pos);
+        bd_result_throw_f(block_io->set_pos(block_io, pos), "Cannot set position %llu", pos);
     }
 
     void shiftPosition(bd_u64 offset)
     {
-        bd_result_throw_f(blob->shift_pos(blob, offset), "Cannot shift position on %llu", offset);
+        bd_result_throw_f(block_io->shift_pos(block_io, offset), "Cannot shift position on %llu", offset);
     }
 
-    const DefaultTemplBase& getItem(const char* item, bd_u32 index = 0) const;
+    const BlockTemplBase& getBlock(const char* block_name, bd_u32 index = 0) const;
 
     template<class T>
     const T& operator [](bd_u32 index)
@@ -119,7 +119,7 @@ public:
         bd_require_false_f(size == sizeof(T),
                 "Sizes of current element and requested one are not equal: %llu != %u", size, sizeof(T));
 
-        if (type == BD_IT_TEMPL)
+        if (type == BD_TEMPL)
         {
             return (T) *(children_vec[index]);
         }
@@ -131,22 +131,22 @@ public:
     }
 
 protected:
-    bd_templ_blob *blob;
+    bd_block_io *block_io;
 
-    typedef std::vector<DefaultTemplBase*> Children;
+    typedef std::vector<BlockTemplBase*> Children;
     Children children_vec;
 
     void get_data(bd_u64 _offset, bd_u64 _size, bd_pointer _val) const
     {
-        bd_result_throw_f(blob->get_datap(blob, _offset, _size, _val), "Cannot read data at position %llu, size %llu",
-                _offset, _size);
+        bd_result_throw_f(block_io->get_datap(block_io, _offset, _size, _val),
+                "Cannot read data at position %llu, size %llu", _offset, _size);
     }
 
-    bd_u32 add_child(DefaultTemplBase* child)
+    bd_u32 add_child(BlockTemplBase* child)
     {
         children_vec.push_back(child);
 
-        children.child = (bd_item**)children_vec.data();
+        children.child = (bd_block**)children_vec.data();
         children.count = children_vec.size();
         return children.count - 1;
     }
@@ -159,39 +159,39 @@ protected:
  * @param T Data type
  * @param simple_type true if
  */
-template<class T, bd_item_type _type = BD_IT_TEMPL>
-class DefaultTempl : public DefaultTemplBase
+template<class T, bd_block_type _type = BD_TEMPL>
+class BlockTempl : public BlockTemplBase
 {
 public:
-    typedef DefaultTempl<T, _type> class_type;
+    typedef BlockTempl<T, _type> class_type;
     typedef T value_type;
 
-//    DefaultTempl(bd_templ_blob* _blob, bd_cstring _var_name, bd_u32 _count, DefaultTemplBase* _parent)
-//        : DefaultTemplBase(_blob, _var_name, (bd_cstring) typeid(T).name(), _type, sizeof(T), _count, _parent)
+//    BlockTempl(bd_block_io* _blob, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent)
+//        : BlockTemplBase(_blob, _var_name, (bd_cstring) typeid(T).name(), _type, sizeof(T), _count, _parent)
 //    {
 //    }
 
-    DefaultTempl(bd_templ_blob* _blob, bd_cstring _var_name, bd_cstring _type_name, bd_u32 _count, DefaultTemplBase* _parent)
-        : DefaultTemplBase(_blob, _var_name, _type_name, _type, sizeof(T), _count, _parent)
+    BlockTempl(bd_block_io* _block_io, bd_cstring _var_name, bd_cstring _type_name, bd_u32 _count, BlockTemplBase* _parent)
+        : BlockTemplBase(_block_io, _var_name, _type_name, _type, sizeof(T), _count, _parent)
     {
     }
 
     const T& operator ()() const
     {
         bd_require_true(is_array == BD_FALSE, "Cannot get value of array element");
-        bd_require_true(type != BD_IT_TEMPL, "Cannot get value of template element");
+        bd_require_true(type != BD_TEMPL, "Cannot get value of template element");
 
         return value();
     }
 
     const T& operator [](bd_u32 i)
     {
-        return DefaultTemplBase::operator []<T>(i);
+        return BlockTemplBase::operator []<T>(i);
     }
 
     void getData(void* val) const
     {
-        bd_require_true(type != BD_IT_TEMPL, "Cannot get data of template object");
+        bd_require_true(type != BD_TEMPL, "Cannot get data of template object");
 
         get_data(offset, size, val);
     }
@@ -199,7 +199,7 @@ public:
 #pragma GCC diagnostic ignored "-Wreturn-local-addr"
     inline const T& value() const
     {
-        bd_require_true(type != BD_IT_TEMPL, "Cannot get value of template object");
+        bd_require_true(type != BD_TEMPL, "Cannot get value of template object");
 
         T val;
         get_data(offset, sizeof(T), &val);
@@ -213,33 +213,33 @@ public:
     bool operator ==(const class_type& other) const
     {
         bd_require_true(is_array == BD_FALSE, "Cannot compare arrays");
-        bd_require_true(type != BD_IT_TEMPL, "Cannot compare templates");
+        bd_require_true(type != BD_TEMPL, "Cannot compare templates");
 
         return value() == other.value();
     }
 
     template<class I>
-    const I& item(const char* _item, bd_u32 index = 0) const
+    const I& block(const char* _item, bd_u32 index = 0) const
     {
-        const DefaultTemplBase& templ = getItem(_item, index);
+        const BlockTemplBase& templ = getBlock(_item, index);
         return static_cast<const I&>(templ);
     }
 
     template<class I>
-    const I& valueOf(const char* _item, bd_u32 index = 0) const
+    const I& valueOf(const char* block_name, bd_u32 index = 0) const
     {
-        return item<I>(_item, index).value();
+        return block<I>(block_name, index).value();
     }
 
     void apply() {}
 
-    bd_templ_blob* getBlob() { return blob; }
+    bd_block_io* getBlockIo() { return block_io; }
 };
 
 #define DECL_SIMPLE_TEMPL(type)                                                                          \
-    class type : public DefaultTempl<type##_T, BD_IT_##type> {                                           \
-    public: type(bd_templ_blob* _blob, bd_cstring _var_name, bd_u32 _count, DefaultTemplBase* _parent) : \
-    DefaultTempl(_blob, _var_name, (bd_cstring) #type, _count, _parent) {}}
+    class type : public BlockTempl<type##_T, BD_##type> {                                             \
+    public: type(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) : \
+    BlockTempl(_block_io, _var_name, (bd_cstring) #type, _count, _parent) {}}
 
 DECL_SIMPLE_TEMPL(CHAR);
 DECL_SIMPLE_TEMPL(UCHAR);
@@ -260,8 +260,8 @@ public:
 
     const char* getName() { return type_name; }
 
-    virtual bd_item* applyTemplate(bd_templ_blob *blob, bd_cstring script) = 0;
-    virtual void freeTemplate(bd_item *item) = 0;
+    virtual bd_block* applyTemplate(bd_block_io *block_io, bd_cstring script) = 0;
+    virtual void freeTemplate(bd_block *block) = 0;
 };
 
 #endif /* DEFAULT_TEMPL_BASE_H_ */

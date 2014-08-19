@@ -1,5 +1,5 @@
 
-set(CMAKE_PREFIX_PATH "~/Programs/Qt/5.2.1/gcc_64/")
+set(CMAKE_PREFIX_PATH "~/Programs/Qt/5.3/gcc_64/")
 
 find_package(Qt5Widgets)
 

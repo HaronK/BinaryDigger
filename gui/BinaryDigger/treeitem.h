@@ -6,7 +6,6 @@
 #include <QVariant>
 #include <QVector>
 
-//! [0]
 template <class T>
 class TreeItem
 {
@@ -36,42 +35,32 @@ private:
     TreeItem *parentItem;
     T userData;
 };
-//! [0]
 
-//! [0]
 template<class T>
 TreeItem<T>::TreeItem(const QVector<QVariant> &data, TreeItem<T> *parent)
 {
     parentItem = parent;
     itemData = data;
 }
-//! [0]
 
-//! [1]
 template<class T>
 TreeItem<T>::~TreeItem()
 {
     qDeleteAll(childItems);
 }
-//! [1]
 
-//! [2]
 template<class T>
 TreeItem<T> *TreeItem<T>::child(int number)
 {
     return childItems.value(number);
 }
-//! [2]
 
-//! [3]
 template<class T>
 int TreeItem<T>::childCount() const
 {
     return childItems.count();
 }
-//! [3]
 
-//! [4]
 template<class T>
 int TreeItem<T>::childNumber() const
 {
@@ -80,25 +69,19 @@ int TreeItem<T>::childNumber() const
 
     return 0;
 }
-//! [4]
 
-//! [5]
 template<class T>
 int TreeItem<T>::columnCount() const
 {
     return itemData.count();
 }
-//! [5]
 
-//! [6]
 template<class T>
 QVariant TreeItem<T>::data(int column) const
 {
     return itemData.value(column);
 }
-//! [6]
 
-//! [7]
 template<class T>
 bool TreeItem<T>::insertChildren(int position, int count, int columns)
 {
@@ -113,9 +96,7 @@ bool TreeItem<T>::insertChildren(int position, int count, int columns)
 
     return true;
 }
-//! [7]
 
-//! [8]
 template<class T>
 bool TreeItem<T>::insertColumns(int position, int columns)
 {
@@ -130,17 +111,13 @@ bool TreeItem<T>::insertColumns(int position, int columns)
 
     return true;
 }
-//! [8]
 
-//! [9]
 template<class T>
 TreeItem<T> *TreeItem<T>::parent()
 {
     return parentItem;
 }
-//! [9]
 
-//! [10]
 template<class T>
 bool TreeItem<T>::removeChildren(int position, int count)
 {
@@ -152,7 +129,6 @@ bool TreeItem<T>::removeChildren(int position, int count)
 
     return true;
 }
-//! [10]
 
 template<class T>
 bool TreeItem<T>::removeColumns(int position, int columns)
@@ -169,7 +145,6 @@ bool TreeItem<T>::removeColumns(int position, int columns)
     return true;
 }
 
-//! [11]
 template<class T>
 bool TreeItem<T>::setData(int column, const QVariant &value)
 {
@@ -179,6 +154,5 @@ bool TreeItem<T>::setData(int column, const QVariant &value)
     itemData[column] = value;
     return true;
 }
-//! [11]
 
 #endif // TREEITEM_H

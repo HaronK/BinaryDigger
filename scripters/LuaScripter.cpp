@@ -22,11 +22,11 @@ extern "C" {
 #define DEBUG_OUTPUT(msg) std::cout << msg
 //#define DEBUG_OUTPUT(msg)
 
-class LuaTempl: public DefaultTempl<LuaTempl>
+class LuaTempl: public BlockTempl<LuaTempl>
 {
 public:
-    LuaTempl(bd_templ_blob* _blob, bd_cstring _var_name, bd_cstring _templ_name, bd_u32 _count, DefaultTemplBase* _parent)
-        : DefaultTempl(_blob, _var_name, _templ_name, _count, _parent)
+    LuaTempl(bd_block_io* _blob, bd_cstring _var_name, bd_cstring _templ_name, bd_u32 _count, BlockTemplBase* _parent)
+        : BlockTempl(_blob, _var_name, _templ_name, _count, _parent)
     {}
 };
 
@@ -65,8 +65,8 @@ std::string tostring(const luabind::object& obj, const std::string& indent = "")
     case LUA_TUSERDATA:
         return "<userdata>";
 //    {
-////        LuaTempl* templ = (LuaTempl*) luabind::touserdata<DefaultTemplBase>(obj);
-//        DefaultTemplBase templ = luabind::object_cast<DefaultTemplBase>(obj);
+////        LuaTempl* templ = (LuaTempl*) luabind::touserdata<BlockTemplBase>(obj);
+//        BlockTemplBase templ = luabind::object_cast<BlockTemplBase>(obj);
 //        return Poco::format("%s::%s", std::string(templ.type_name), std::string(templ.name));
 //    }
     case LUA_TTHREAD:
@@ -86,22 +86,22 @@ void setRootTempl(lua_State* L, LuaTempl* templ)
 {
 //    bd_require_eq(luabind::globals(L)["bd"], luabind::nil, "Root object already exists");
 
-    luabind::globals(L)["bd"] = (DefaultTemplBase*) templ;
+    luabind::globals(L)["bd"] = (BlockTemplBase*) templ;
 }
 
 LuaTempl* getCurrentTempl(lua_State* L)
 {
-    return (LuaTempl*) getGlobalVariable<DefaultTemplBase*>(L, "self");
+    return (LuaTempl*) getGlobalVariable<BlockTemplBase*>(L, "self");
 }
 
 luabind::object setCurrentTempl(lua_State* L, LuaTempl* templ)
 {
     luabind::object prev = luabind::globals(L)["self"];
-    luabind::globals(L)["self"] = (DefaultTemplBase*) templ;
+    luabind::globals(L)["self"] = (BlockTemplBase*) templ;
     return prev;
 }
 
-void registerTemplVariable(lua_State* L, DefaultTemplBase* templ, const std::string& var_name)
+void registerTemplVariable(lua_State* L, BlockTemplBase* templ, const std::string& var_name)
 {
     luabind::object cur_obj = luabind::globals(L)["self"];
 
@@ -189,7 +189,7 @@ int apply_templ(const luabind::object& data)
 
     // TODO: apply local template settings that are defined in 'data' table as named elements
 
-    LuaTempl* templ = new LuaTempl(cur_templ->getBlob(), (bd_cstring) var_name.c_str(),
+    LuaTempl* templ = new LuaTempl(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(),
             (bd_cstring) templ_name.c_str(), arr_size, cur_templ);
 
     registerTemplVariable(L, templ, var_name);
@@ -259,7 +259,7 @@ void apply_simple_templ(const luabind::object& data)
 
     // TODO: apply local template settings that are defined in 'data' table as named elements
 
-    T* templ = new T(cur_templ->getBlob(), (bd_cstring) var_name.c_str(), arr_size, cur_templ);
+    T* templ = new T(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(), arr_size, cur_templ);
 
     registerTemplVariable(L, templ, var_name);
 
@@ -273,7 +273,7 @@ luabind::scope register_simple_templ(const std::string& name)
 }
 
 template<>
-bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring script)
+bd_block* TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* blob, bd_cstring script)
 {
     bd_require_not_null(blob, "Parameter 'blob' is null");
 
@@ -288,10 +288,10 @@ bd_item* TemplWrapper<LuaTempl>::applyTemplate(bd_templ_blob* blob, bd_cstring s
     // scripter default functions
     luabind::module(L)
     [
-        luabind::class_<bd_templ_blob>("TemplBlob"),
-        luabind::class_<DefaultTemplBase>("LuaTempl")
-            .def("getPosition", &DefaultTemplBase::getPosition)
-            .def("setPosition", &DefaultTemplBase::setPosition),
+        luabind::class_<bd_block_io>("TemplBlob"),
+        luabind::class_<BlockTemplBase>("LuaTempl")
+            .def("getPosition", &BlockTemplBase::getPosition)
+            .def("setPosition", &BlockTemplBase::setPosition),
 
         luabind::def("templ", &register_templ),
         register_simple_templ<CHAR>  ("char"),

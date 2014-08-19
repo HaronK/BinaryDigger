@@ -16,13 +16,13 @@
 #include <Poco/FileStream.h>
 #include "Poco/BinaryReader.h"
 
-bd_result _get_pos(bd_templ_blob *self, bd_u64 *_pos);
-bd_result _set_pos(bd_templ_blob *self, bd_u64 pos);
-bd_result _shift_pos(bd_templ_blob *self, bd_u64 offset);
-bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val);
-bd_result _get_datap(bd_templ_blob *self, bd_u64 pos, bd_u64 size, bd_pointer val);
+bd_result _get_pos(bd_block_io *self, bd_u64 *_pos);
+bd_result _set_pos(bd_block_io *self, bd_u64 pos);
+bd_result _shift_pos(bd_block_io *self, bd_u64 offset);
+bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val);
+bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val);
 
-struct file_templ_blob : public bd_templ_blob
+struct file_templ_blob : public bd_block_io
 {
     file_templ_blob(const char *file_path)
         : dataFile(file_path, std::ios::in)
@@ -42,35 +42,35 @@ struct file_templ_blob : public bd_templ_blob
     Poco::FileInputStream dataFile;
 };
 
-bd_result _get_pos(bd_templ_blob *self, bd_u64 *_pos)
+bd_result _get_pos(bd_block_io *self, bd_u64 *_pos)
 {
     file_templ_blob *blob = (file_templ_blob *)self;
     *_pos = blob->dataFile.tellg();
     return blob->dataFile.fail() ? -1 : BD_SUCCESS;
 }
 
-bd_result _set_pos(bd_templ_blob *self, bd_u64 pos)
+bd_result _set_pos(bd_block_io *self, bd_u64 pos)
 {
     file_templ_blob *blob = (file_templ_blob *)self;
     blob->dataFile.seekg(pos, std::ios_base::beg);
     return blob->dataFile.fail() ? -1 : BD_SUCCESS;
 }
 
-bd_result _shift_pos(bd_templ_blob *self, bd_u64 offset)
+bd_result _shift_pos(bd_block_io *self, bd_u64 offset)
 {
     file_templ_blob *blob = (file_templ_blob *)self;
     blob->dataFile.seekg(offset, std::ios_base::cur);
     return blob->dataFile.fail() ? -1 : BD_SUCCESS;
 }
 
-bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val)
+bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val)
 {
     file_templ_blob *blob = (file_templ_blob *)self;
     blob->dataFile.read((char *)val, size);
     return blob->dataFile.fail() ? -1 : BD_SUCCESS;
 }
 
-bd_result _get_datap(bd_templ_blob *self, bd_u64 pos, bd_u64 size, bd_pointer val)
+bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val)
 {
     file_templ_blob *blob = (file_templ_blob *)self;
 
@@ -129,9 +129,9 @@ bd_result loadPlugin(const char* file, PluginLibrary *pl)
     return BD_SUCCESS;
 }
 
-bd_u64 calc_item_tree_size(const bd_item *item)
+bd_u64 calc_item_tree_size(const bd_block *item)
 {
-    bd_u64 result = sizeof(bd_item);
+    bd_u64 result = sizeof(bd_block);
     if (item->children.count > 0)
     {
         for (bd_u32 i = 0; i < item->children.count; ++i)
@@ -143,7 +143,7 @@ bd_u64 calc_item_tree_size(const bd_item *item)
 }
 
 const char *single_indent = "  ";
-void dump_item(const bd_item *item, const std::string& indent = "")
+void dump_item(const bd_block *item, const std::string& indent = "")
 {
     printf("%-7s %-15s<%d>: %8lXh %6lXh",
             item->type_name, item->name, item->children.count,
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
     std::cout << "Plugin " << name << " initialized. Available " << templ_count << " template(s)." << std::endl;
 
     file_templ_blob blob(argc > 1 ? argv[1] : "data1.npk");
-    bd_item *root_item;
+    bd_block *root_item;
 
     if (!BD_SUCCEED(pl.plugin.apply_template(0, &blob, &root_item, 0)))
     {

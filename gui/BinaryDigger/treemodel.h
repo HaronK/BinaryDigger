@@ -9,25 +9,21 @@
 #include "../../include/bd.h"
 #include "treeitem.h"
 
-//! [0]
 class TreeModel : public QAbstractItemModel
 {
     Q_OBJECT
 
 public:
-    TreeModel(const QStringList &headers, bd_templ_blob *templ_blob, const bd_item *root_item,
+    TreeModel(const QStringList &headers, bd_block_io *block_io, const bd_block *root_block,
               QObject *parent = 0);
     ~TreeModel();
-//! [0]
-
-//! [1]
 
     struct UserData
     {
         bd_u32 index;
-        const bd_item* item;
+        const bd_block* block;
 
-        UserData() : index((bd_u32)-1), item(0) {}
+        UserData() : index((bd_u32)-1), block(0) {}
     };
 
     QVariant data(const QModelIndex &index, int role) const;
@@ -40,9 +36,7 @@ public:
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
-//! [1]
 
-//! [2]
     Qt::ItemFlags flags(const QModelIndex &index) const;
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole);
@@ -58,17 +52,16 @@ public:
     bool removeRows(int position, int rows,
                     const QModelIndex &parent = QModelIndex());
 
-    TreeItem<UserData> *getItem(const QModelIndex &index) const;
+    TreeItem<UserData> *getBlock(const QModelIndex &index) const;
 
 private:
     void setupModelData(const QStringList &lines, TreeItem<UserData> *parent);
 
-    bd_templ_blob *templ_blob;
+    bd_block_io *block_io;
     TreeItem<UserData> *rootItem;
 
-    void generateModelData(const bd_item *item, bd_u32 index, TreeItem<UserData> *parent);
-    const bd_item* hdRootItem;
+    void generateModelData(const bd_block *block, bd_u32 index, TreeItem<UserData> *parent);
+    const bd_block* hdRootBlock;
 };
-//! [2]
 
 #endif // TREEMODEL_H

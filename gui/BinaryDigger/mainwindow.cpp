@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     pluginIndex = -1;
     templIndex = 0;
-    rootItem = 0;
+    rootBlock = 0;
     treeModelHeaders << tr("Name") << tr("Value") << tr("Type") << tr("Start") << tr("Size");
 
     try
@@ -48,7 +48,7 @@ MainWindow::~MainWindow()
 {
     try
     {
-        freeTemplate(rootItem);
+        freeTemplate(rootBlock);
     }
     catch (const BDException &ex)
     {
@@ -169,11 +169,11 @@ void MainWindow::initializePlugin(PluginLibrary &pl)
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Plugin initialized."), QMessageBox::Ok);
 }
 
-void MainWindow::applyTemplate(bd_item *item)
+void MainWindow::applyTemplate(bd_block *block)
 {
     if (pluginIndex == -1)
         return;
-    if (item != 0)
+    if (block != 0)
         throw BDException(tr("Item is not 0"));
 
     if (templBlob.dataFile.isNull() || !templBlob.dataFile->isOpen())
@@ -182,7 +182,7 @@ void MainWindow::applyTemplate(bd_item *item)
         return;
     }
 
-    freeTemplate(item);
+    freeTemplate(block);
 
     std::string script;
 
@@ -192,23 +192,23 @@ void MainWindow::applyTemplate(bd_item *item)
     templBlob.dataFile->seek(0);
 
     BD_CHECK(plugins[pluginIndex].plugin,
-             apply_template(templIndex, &templBlob, &item, script.empty() ? 0 :(bd_cstring) script.c_str()),
+             apply_template(templIndex, &templBlob, &block, script.empty() ? 0 :(bd_cstring) script.c_str()),
              tr("Could not apply template 0"));
 
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template applied successfully."), QMessageBox::Ok);
 
-    treeModel = new TreeModel(treeModelHeaders, &templBlob, item);
+    treeModel = new TreeModel(treeModelHeaders, &templBlob, block);
     treeView->setModel(treeModel);
 
     resizeTreeColumns();
 }
 
-void MainWindow::freeTemplate(bd_item *item)
+void MainWindow::freeTemplate(bd_block *block)
 {
-    if (pluginIndex == -1 || item == 0)
+    if (pluginIndex == -1 || block == 0)
         return;
 
-    if (!BD_SUCCEED(plugins[pluginIndex].plugin.free_template(templIndex, item)))
+    if (!BD_SUCCEED(plugins[pluginIndex].plugin.free_template(templIndex, block)))
     {
         // TODO: duplication looks not very nice. Use BOOST_SCOPE_EXIT or equivalent
         treeView->setModel(0);
@@ -243,11 +243,11 @@ void MainWindow::treeItemSelected()
     if (!curIndex.isValid())
         return;
 
-    const TreeModel::UserData& curItem = treeModel->getItem(curIndex)->getUserData();
-    if (curItem.item != 0)
+    const TreeModel::UserData& curItem = treeModel->getBlock(curIndex)->getUserData();
+    if (curItem.block != 0)
     {
-        bd_u64 begin = curItem.item->offset + (curItem.index == (bd_u32)-1 ? 0 : curItem.index * curItem.item->elem_size);
-        bd_u64 size = curItem.index == (bd_u32)-1 ? curItem.item->size : curItem.item->elem_size;
+        bd_u64 begin = curItem.block->offset + (curItem.index == (bd_u32)-1 ? 0 : curItem.index * curItem.block->elem_size);
+        bd_u64 size = curItem.index == (bd_u32)-1 ? curItem.block->size : curItem.block->elem_size;
         hexEdit->setSelectionRange(begin, begin + size);
     }
 }
@@ -263,7 +263,7 @@ void MainWindow::pluginTemplActivated()
 
     try
     {
-        applyTemplate(rootItem);
+        applyTemplate(rootBlock);
     }
     catch (const BDException& ex)
     {
@@ -315,7 +315,7 @@ void MainWindow::open()
         loadFile(fileName);
         setWindowTitle(tr("%1 - Binary Digger").arg(fileName));
 
-        freeTemplate(rootItem);
+        freeTemplate(rootBlock);
     }
     else
     {

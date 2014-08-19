@@ -31,7 +31,7 @@ using Poco::AutoPtr;
 
 
 // ---------------------------------------------------------------------------------------
-struct FileTemplBlob : bd_templ_blob
+struct FileTemplBlob : bd_block_io
 {
     FileTemplBlob(const std::string& path);
     ~FileTemplBlob();
@@ -39,7 +39,7 @@ struct FileTemplBlob : bd_templ_blob
     Poco::FileStream dataFile;
 };
 
-bd_result _get_pos(bd_templ_blob *self, bd_u64 *_pos)
+bd_result _get_pos(bd_block_io *self, bd_u64 *_pos)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     try
@@ -53,7 +53,7 @@ bd_result _get_pos(bd_templ_blob *self, bd_u64 *_pos)
     return BD_SUCCESS;
 }
 
-bd_result _set_pos(bd_templ_blob *self, bd_u64 pos)
+bd_result _set_pos(bd_block_io *self, bd_u64 pos)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     try
@@ -67,7 +67,7 @@ bd_result _set_pos(bd_templ_blob *self, bd_u64 pos)
     return BD_SUCCESS;
 }
 
-bd_result _shift_pos(bd_templ_blob *self, bd_u64 offset)
+bd_result _shift_pos(bd_block_io *self, bd_u64 offset)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     try
@@ -81,7 +81,7 @@ bd_result _shift_pos(bd_templ_blob *self, bd_u64 offset)
     return BD_SUCCESS;
 }
 
-bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val)
+bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     try
@@ -95,7 +95,7 @@ bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val)
     return BD_SUCCESS;
 }
 
-bd_result _get_datap(bd_templ_blob *self, bd_u64 pos, bd_u64 size, bd_pointer val)
+bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     try
@@ -355,7 +355,7 @@ protected:
         return BD_SUCCESS;
     }
 
-    bd_result applyTemplate(PluginInfo& pluginInfo, FileTemplBlob& templBlob, bd_item **item)
+    bd_result applyTemplate(PluginInfo& pluginInfo, FileTemplBlob& templBlob, bd_block **item)
     {
         freeTemplate(pluginInfo, *item);
 
@@ -371,7 +371,7 @@ protected:
         return BD_SUCCESS;
     }
 
-    bd_result freeTemplate(PluginInfo& pluginInfo, bd_item *item)
+    bd_result freeTemplate(PluginInfo& pluginInfo, bd_block *item)
     {
         if (item == 0)
             return BD_SUCCESS;
@@ -384,7 +384,7 @@ protected:
         return BD_SUCCESS;
     }
 
-    void dumpTree(std::ostream& output, FileTemplBlob& templBlob, const bd_item *item, const std::string& indent = "")
+    void dumpTree(std::ostream& output, FileTemplBlob& templBlob, const bd_block *item, const std::string& indent = "")
     {
         if (item == 0)
         {
@@ -458,7 +458,7 @@ protected:
             for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
             {
                 FileTemplBlob templBlob(*it);
-                bd_item *item = NULL;
+                bd_block *item = NULL;
 
                 // 1. Apply plugin to the file
                 if (!BD_SUCCEED(applyTemplate(pluginInfo, templBlob, &item)))

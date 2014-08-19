@@ -60,15 +60,15 @@ private:
     void loadPlugins();
 
     void initializePlugin(PluginLibrary &pl);
-    void applyTemplate(bd_item *item);
-    void freeTemplate(bd_item *item);
+    void applyTemplate(bd_block *block);
+    void freeTemplate(bd_block *block);
     void finalizePlugin(PluginLibrary &pl);
 
     void resizeTreeColumns();
 
     FileTemplBlob templBlob;
     bd_u32 templIndex;
-    bd_item *rootItem;
+    bd_block *rootBlock;
 
     // QHexEdit
 protected:

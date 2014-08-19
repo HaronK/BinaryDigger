@@ -9,17 +9,17 @@ BD_C_EXTERN_BEGIN
 
 typedef enum
 {
-    BD_IT_TEMPL  = 0, // user defined template
-    BD_IT_STRUCT = 1, // user defined plain structure
+    BD_TEMPL  = 0, // user defined template
+    BD_STRUCT = 1, // user defined plain structure
 
     // simple types
-    BD_IT_CHAR,
-    BD_IT_UCHAR,
-    BD_IT_WORD,
-    BD_IT_DWORD,
-    BD_IT_QWORD,
-    BD_IT_DOUBLE,
-} bd_item_type;
+    BD_CHAR,
+    BD_UCHAR,
+    BD_WORD,
+    BD_DWORD,
+    BD_QWORD,
+    BD_DOUBLE,
+} bd_block_type;
 
 // Template types
 typedef bd_i8  CHAR_T;
@@ -29,40 +29,41 @@ typedef bd_i32 DWORD_T;
 typedef bd_i64 QWORD_T;
 typedef bd_f64 DOUBLE_T;
 
-typedef struct bd_templ_blob
+typedef struct bd_block_io
 {
-    bd_result (*get_pos)   (bd_templ_blob *self, bd_u64 *pos);
-    bd_result (*set_pos)   (bd_templ_blob *self, bd_u64 pos);
-    bd_result (*shift_pos) (bd_templ_blob *self, bd_u64 offset);
+    bd_result (*get_pos)   (bd_block_io *self, bd_u64 *pos);
+    bd_result (*set_pos)   (bd_block_io *self, bd_u64 pos);
+    bd_result (*shift_pos) (bd_block_io *self, bd_u64 offset);
 
-    bd_result (*get_data)  (bd_templ_blob *self, bd_u64 size, bd_pointer val);
-    bd_result (*get_datap) (bd_templ_blob *self, bd_u64 pos, bd_u64 size, bd_pointer val);
-} bd_templ_blob;
+    bd_result (*get_data)  (bd_block_io *self, bd_u64 size, bd_pointer val);
+    bd_result (*get_datap) (bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val);
+} bd_block_io;
 
-typedef struct bd_item
+typedef struct bd_block
 {
-    bd_string name;      // user item name. cannot be changed outside of plugin
-    bd_string type_name; // user item type name. cannot be changed outside of plugin
+    bd_string name;      // user block name. cannot be changed outside of plugin
+    bd_string type_name; // user block type name. cannot be changed outside of plugin
 
-    bd_item_type type;
+    bd_block_type type;
 
-    bd_u64 offset; // element offset on the blob
+    bd_u64 offset; // element offset on the block blob
     bd_u64 size;   // element size
 
-    bd_bool is_array;   //
-    bd_u64 elem_size;   // array element size or 0 for templates
-    bd_u32 count;       // count of array elements
+    bd_bool is_array; // block is array
+    bd_u64 elem_size; // array element size or 0 for templates
+    bd_u32 count;     // count of array elements
 
-    bd_item *parent;
+    bd_block *parent;
     struct
     {
-        bd_item **child;
+        bd_block **child;
         bd_u32 count;
     } children;
-} bd_item;
+} bd_block;
 
 /**
  * Get text message by its result code.
+ *
  * @param result Result code.
  * @param msg [OUT] Message string.
  * @return Result code @see(bd_result) for details
@@ -72,6 +73,7 @@ typedef bd_result (*bd_result_message_t)(bd_result result, bd_string msg, bd_u32
 
 /**
  * Initialize plugin.
+ *
  * @param name Plugin name.
  * @param templ_count [OUT] Return registered plugin templetes count.
  * @return Result code @see(bd_result) for details
@@ -81,6 +83,7 @@ typedef bd_result (*bd_initialize_plugin_t)(bd_string *name, bd_u32 *templ_count
 
 /**
  * Retrieve template name by index.
+ *
  * @param index Template index
  * @param name [OUT] Template name
  * @return Result code @see(bd_result) for details
@@ -90,25 +93,28 @@ typedef bd_result (*bd_template_name_t)(bd_u32 index, bd_string *name);
 
 /**
  * Apply template to the blob data and return items hierarchy.
- * @param index Template index
- * @param blob Blob data accessor
- * @param item [OUT] Items hierarchy
+ *
+ * @param index       Template index
+ * @param block_io    Block blob data accessor
+ * @param block [OUT] Blocks hierarchy
  * @return Result code @see(bd_result) for details
  */
-BD_EXPORT bd_result bd_apply_template(bd_u32 index, bd_templ_blob *blob, bd_item **item, bd_cstring script);
-typedef bd_result (*bd_apply_template_t)(bd_u32 index, bd_templ_blob *blob, bd_item **item, bd_cstring script);
+BD_EXPORT bd_result bd_apply_template(bd_u32 index, bd_block_io *block_io, bd_block **block, bd_cstring script);
+typedef bd_result (*bd_apply_template_t)(bd_u32 index, bd_block_io *block_io, bd_block **block, bd_cstring script);
 
 /**
  * Free all items hierarchy data.
+ *
  * @param index Template index
- * @param item Items hierarchy
+ * @param block Blocks hierarchy
  * @return Result code @see(bd_result) for details
  */
-BD_EXPORT bd_result bd_free_template(bd_u32 index, bd_item *item);
-typedef bd_result (*bd_free_template_t)(bd_u32 index, bd_item *item);
+BD_EXPORT bd_result bd_free_template(bd_u32 index, bd_block *block);
+typedef bd_result (*bd_free_template_t)(bd_u32 index, bd_block *block);
 
 /**
  * Finalize plugin.
+ *
  * @return Result code @see(bd_result) for details
  */
 BD_EXPORT bd_result bd_finalize_plugin();

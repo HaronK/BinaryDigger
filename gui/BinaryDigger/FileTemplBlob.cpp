@@ -1,27 +1,27 @@
 
 #include "FileTemplBlob.h"
 
-bd_result _get_pos(bd_templ_blob *self, bd_u64 *_pos)
+bd_result _get_pos(bd_block_io *self, bd_u64 *_pos)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     *_pos = blob->dataFile->pos();
     return BD_SUCCESS;
 }
 
-bd_result _set_pos(bd_templ_blob *self, bd_u64 pos)
+bd_result _set_pos(bd_block_io *self, bd_u64 pos)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     return blob->dataFile->seek(pos) ? BD_SUCCESS : -1;
 }
 
-bd_result _shift_pos(bd_templ_blob *self, bd_u64 offset)
+bd_result _shift_pos(bd_block_io *self, bd_u64 offset)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
     qint64 _pos = blob->dataFile->pos();
     return blob->dataFile->seek(_pos + offset) ? BD_SUCCESS : -1;
 }
 
-bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val)
+bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
 
@@ -30,7 +30,7 @@ bd_result _get_data(bd_templ_blob *self, bd_u64 size, bd_pointer val)
     return (bd_u64) data_read == size ? BD_SUCCESS : -1;
 }
 
-bd_result _get_datap(bd_templ_blob *self, bd_u64 pos, bd_u64 size, bd_pointer val)
+bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val)
 {
     FileTemplBlob *blob = (FileTemplBlob *)self;
 

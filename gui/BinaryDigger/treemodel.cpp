@@ -7,8 +7,8 @@
 
 #include <BDException.h>
 
-TreeModel::TreeModel(const QStringList &headers, bd_templ_blob *templ_blob, const bd_item *root_item, QObject *parent)
-    : QAbstractItemModel(parent), templ_blob(templ_blob), hdRootItem(root_item)
+TreeModel::TreeModel(const QStringList &headers, bd_block_io *block_io, const bd_block *root_block, QObject *parent)
+    : QAbstractItemModel(parent), block_io(block_io), hdRootBlock(root_block)
 {
     QVector<QVariant> rootData;
     foreach (QString header, headers)
@@ -17,24 +17,20 @@ TreeModel::TreeModel(const QStringList &headers, bd_templ_blob *templ_blob, cons
     rootItem = new TreeItem<UserData>(rootData);
     UserData userData;
     userData.index = (bd_u32)-1;
-    userData.item = root_item;
+    userData.block = root_block;
     rootItem->setUserData(userData);
-    generateModelData(hdRootItem, (bd_u32)-1, rootItem);
+    generateModelData(hdRootBlock, (bd_u32)-1, rootItem);
 }
 
-//! [1]
 TreeModel::~TreeModel()
 {
     delete rootItem;
 }
-//! [1]
 
-//! [2]
 int TreeModel::columnCount(const QModelIndex & /* parent */) const
 {
     return rootItem->columnCount();
 }
-//! [2]
 
 QVariant TreeModel::data(const QModelIndex &index, int role) const
 {
@@ -44,12 +40,11 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const
     if (role != Qt::DisplayRole && role != Qt::EditRole)
         return QVariant();
 
-    TreeItem<UserData> *item = getItem(index);
+    TreeItem<UserData> *item = getBlock(index);
 
     return item->data(index.column());
 }
 
-//! [3]
 Qt::ItemFlags TreeModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
@@ -57,10 +52,8 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex &index) const
 
     return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
 }
-//! [3]
 
-//! [4]
-TreeItem<TreeModel::UserData> *TreeModel::getItem(const QModelIndex &index) const
+TreeItem<TreeModel::UserData> *TreeModel::getBlock(const QModelIndex &index) const
 {
     if (index.isValid())
     {
@@ -70,7 +63,6 @@ TreeItem<TreeModel::UserData> *TreeModel::getItem(const QModelIndex &index) cons
     }
     return rootItem;
 }
-//! [4]
 
 QVariant TreeModel::headerData(int section, Qt::Orientation orientation,
                                int role) const
@@ -81,15 +73,12 @@ QVariant TreeModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-//! [5]
 QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (parent.isValid() && parent.column() != 0)
         return QModelIndex();
-//! [5]
 
-//! [6]
-    TreeItem<UserData> *parentItem = getItem(parent);
+    TreeItem<UserData> *parentItem = getBlock(parent);
 
     TreeItem<UserData> *childItem = parentItem->child(row);
     if (childItem)
@@ -97,7 +86,6 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) con
     else
         return QModelIndex();
 }
-//! [6]
 
 bool TreeModel::insertColumns(int position, int columns, const QModelIndex &parent)
 {
@@ -112,7 +100,7 @@ bool TreeModel::insertColumns(int position, int columns, const QModelIndex &pare
 
 bool TreeModel::insertRows(int position, int rows, const QModelIndex &parent)
 {
-    TreeItem<UserData> *parentItem = getItem(parent);
+    TreeItem<UserData> *parentItem = getBlock(parent);
     bool success;
 
     beginInsertRows(parent, position, position + rows - 1);
@@ -122,13 +110,12 @@ bool TreeModel::insertRows(int position, int rows, const QModelIndex &parent)
     return success;
 }
 
-//! [7]
 QModelIndex TreeModel::parent(const QModelIndex &index) const
 {
     if (!index.isValid())
         return QModelIndex();
 
-    TreeItem<UserData> *childItem = getItem(index);
+    TreeItem<UserData> *childItem = getBlock(index);
     TreeItem<UserData> *parentItem = childItem->parent();
 
     if (parentItem == rootItem)
@@ -136,7 +123,6 @@ QModelIndex TreeModel::parent(const QModelIndex &index) const
 
     return createIndex(parentItem->childNumber(), 0, parentItem);
 }
-//! [7]
 
 bool TreeModel::removeColumns(int position, int columns, const QModelIndex &parent)
 {
@@ -154,7 +140,7 @@ bool TreeModel::removeColumns(int position, int columns, const QModelIndex &pare
 
 bool TreeModel::removeRows(int position, int rows, const QModelIndex &parent)
 {
-    TreeItem<UserData> *parentItem = getItem(parent);
+    TreeItem<UserData> *parentItem = getBlock(parent);
     bool success = true;
 
     beginRemoveRows(parent, position, position + rows - 1);
@@ -164,21 +150,19 @@ bool TreeModel::removeRows(int position, int rows, const QModelIndex &parent)
     return success;
 }
 
-//! [8]
 int TreeModel::rowCount(const QModelIndex &parent) const
 {
-    TreeItem<UserData> *parentItem = getItem(parent);
+    TreeItem<UserData> *parentItem = getBlock(parent);
 
     return parentItem->childCount();
 }
-//! [8]
 
 bool TreeModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (role != Qt::EditRole)
         return false;
 
-    TreeItem<UserData> *item = getItem(index);
+    TreeItem<UserData> *item = getBlock(index);
     bool result = item->setData(index.column(), value);
 
     if (result)
@@ -201,9 +185,9 @@ bool TreeModel::setHeaderData(int section, Qt::Orientation orientation,
     return result;
 }
 
-void TreeModel::generateModelData(const bd_item *item, bd_u32 index, TreeItem<UserData> *parent)
+void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<UserData> *parent)
 {
-    if (item == 0)
+    if (block == 0)
     {
         QMessageBox::warning(0, tr("Parsed tree"), tr("Parsed tree is empty."), QMessageBox::Ok);
         return;
@@ -217,110 +201,104 @@ void TreeModel::generateModelData(const bd_item *item, bd_u32 index, TreeItem<Us
     TreeItem<UserData> *child = parent->child(parentChildrenCount);
     UserData userData;
     userData.index = index;
-    userData.item = item;
+    userData.block = block;
     child->setUserData(userData);
 
-    if (item->is_array)
+    if (block->is_array)
     {
-        str.sprintf("%s[%d]", item->name, index == (bd_u32)-1 ? item->count : index);
+        str.sprintf("%s[%d]", block->name, index == (bd_u32)-1 ? block->count : index);
     }
     else
     {
-        str.sprintf("%s", item->name);
+        str.sprintf("%s", block->name);
     }
-    child->setData(0, str);                               // Name
-    child->setData(2, item->type_name);                   // Type
-    child->setData(3, str.sprintf("%lXh", item->offset)); // Start
-    child->setData(4, str.sprintf("%lXh", item->size));   // Size
+    child->setData(0, str);                                // Name
+    child->setData(2, block->type_name);                   // Type
+    child->setData(3, str.sprintf("%lXh", block->offset)); // Start
+    child->setData(4, str.sprintf("%lXh", block->size));   // Size
 
-    if (item->is_array == BD_TRUE && index == (bd_u32)-1 && item->type != BD_IT_CHAR)
+    if (block->is_array == BD_TRUE && index == (bd_u32)-1 && block->type != BD_CHAR)
     {
-        for (bd_u32 i = 0 ; i < item->count; ++i)
+        for (bd_u32 i = 0 ; i < block->count; ++i)
         {
-            generateModelData(item, i, child);
+            generateModelData(block, i, child);
         }
     }
     else // char array or array element
     {
-        bd_u64 offset = item->offset + (index == (bd_u32)-1 ? 0 : index * item->elem_size);
-        switch (item->type)
+        bd_u64 offset = block->offset + (index == (bd_u32)-1 ? 0 : index * block->elem_size);
+        switch (block->type)
         {
-        case BD_IT_CHAR:
+        case BD_CHAR:
         {
-            char *data = new char[item->count + 1];
-            if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, item->offset, item->size, data)))
+            char *data = new char[block->count + 1];
+            if (!BD_SUCCEED(block_io->get_datap(block_io, block->offset, block->size, data)))
             {
                 throw BDException(tr("Could not read single CHAR or CHAR array"));
             }
-            data[item->count] = '\0';
+            data[block->count] = '\0';
             str = QString("\"%1\"").arg(data);
             break;
         }
-        case BD_IT_UCHAR:
+        case BD_UCHAR:
             {
                 unsigned char data;
-                if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, offset, item->elem_size, &data)))
+                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
                 {
                     throw BDException(tr("Could not read UCHAR"));
                 }
-    //            str.sprintf("%uc", data);
                 str = QString("%1").arg(data);
             }
             break;
-        case BD_IT_WORD:
+        case BD_WORD:
             {
                 WORD_T data;
-                if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, offset, item->elem_size, &data)))
+                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
                 {
                     throw BDException(tr("Could not read WORD"));
                 }
-    //            str.sprintf("%i", data);
                 str = QString("%1").arg(data);
             }
             break;
-        case BD_IT_DWORD:
+        case BD_DWORD:
             {
                 DWORD_T data;
-                if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, offset, item->elem_size, &data)))
+                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
                 {
                     throw BDException(tr("Could not read DWORD"));
                 }
-    //            str.sprintf("%i", data);
                 str = QString("%1").arg(data);
             }
             break;
-        case BD_IT_QWORD:
+        case BD_QWORD:
             {
                 QWORD_T data;
-                if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, offset, item->elem_size, &data)))
+                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
                 {
                     throw BDException(tr("Could not read QWORD"));
                 }
-    //            str.sprintf("%ll", data);
                 str = QString("%1").arg(data);
             }
             break;
-        case BD_IT_DOUBLE:
+        case BD_DOUBLE:
             {
                 DOUBLE_T data;
-                if (!BD_SUCCEED(templ_blob->get_datap(templ_blob, offset, item->elem_size, &data)))
+                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
                 {
                     throw BDException(tr("Could not read DOUBLE"));
                 }
-    //            str.sprintf("%ll", data);
                 str = QString("%1").arg(data);
             }
             break;
         default:
-    //        str = "<stub>";
             break;
         }
     }
 
     child->setData(1, str); // Value
 
-    for (bd_u32 i = 0; i < item->children.count; ++i)
+    for (bd_u32 i = 0; i < block->children.count; ++i)
     {
-        generateModelData(item->children.child[i], (bd_u32)-1, child);
+        generateModelData(block->children.child[i], (bd_u32)-1, child);
     }
 }

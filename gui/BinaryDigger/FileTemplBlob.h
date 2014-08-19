@@ -5,7 +5,7 @@
 #include <QFile>
 #include <QSharedPointer>
 
-struct FileTemplBlob : bd_templ_blob
+struct FileTemplBlob : bd_block_io
 {
     FileTemplBlob();
     ~FileTemplBlob();

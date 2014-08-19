@@ -32,7 +32,7 @@ bd_result bd_initialize_plugin(bd_string *name, bd_u32 *templ_count)
     {
         register_plugin(name, registeredTemplates, is_scripter);
     }
-    catch (const DefaultTemplException& ex)
+    catch (const BlockTemplException& ex)
     {
         __lastError = ex.getMessage();
         return ex.getResult();
@@ -51,19 +51,19 @@ bd_result bd_template_name(bd_u32 index, bd_string *name)
     return BD_SUCCESS;
 }
 
-bd_result bd_apply_template(bd_u32 index, bd_templ_blob *blob, bd_item **item, bd_cstring script)
+bd_result bd_apply_template(bd_u32 index, bd_block_io *block_io, bd_block **block, bd_cstring script)
 {
-    if (blob == 0)
+    if (block_io == 0)
         return -1;
-    if (item == 0)
+    if (block == 0)
         return -1;
     if (index >= registeredTemplates.size())
         return -1;
     try
     {
-        *item = registeredTemplates[index]->applyTemplate(blob, script);
+        *block = registeredTemplates[index]->applyTemplate(block_io, script);
     }
-    catch (const DefaultTemplException& ex)
+    catch (const BlockTemplException& ex)
     {
         __lastError = ex.getMessage();
         return ex.getResult();
@@ -71,17 +71,17 @@ bd_result bd_apply_template(bd_u32 index, bd_templ_blob *blob, bd_item **item, b
     return BD_SUCCESS;
 }
 
-bd_result bd_free_template(bd_u32 index, bd_item *item)
+bd_result bd_free_template(bd_u32 index, bd_block *block)
 {
-    if (item == 0)
+    if (block == 0)
         return -1;
     if (index >= registeredTemplates.size())
         return -1;
     try
     {
-        registeredTemplates[index]->freeTemplate(item);
+        registeredTemplates[index]->freeTemplate(block);
     }
-    catch (const DefaultTemplException& ex)
+    catch (const BlockTemplException& ex)
     {
         __lastError = ex.getMessage();
         return ex.getResult();
