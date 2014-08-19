@@ -13,21 +13,13 @@ typedef enum
     BD_STRUCT = 1, // user defined plain structure
 
     // simple types
-    BD_CHAR,
-    BD_UCHAR,
-    BD_WORD,
-    BD_DWORD,
-    BD_QWORD,
-    BD_DOUBLE,
+#define BD_DECL_BLOCK_TYPE(name, type) BD_##name,
+#include "block_types_decl.h"
 } bd_block_type;
 
 // Template types
-typedef bd_i8  CHAR_T;
-typedef bd_u8  UCHAR_T;
-typedef bd_i16 WORD_T;
-typedef bd_i32 DWORD_T;
-typedef bd_i64 QWORD_T;
-typedef bd_f64 DOUBLE_T;
+#define BD_DECL_BLOCK_TYPE(name, type) typedef type name##_T;
+#include "block_types_decl.h"
 
 typedef struct bd_block_io
 {

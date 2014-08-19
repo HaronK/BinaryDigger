@@ -236,17 +236,12 @@ public:
     bd_block_io* getBlockIo() { return block_io; }
 };
 
-#define DECL_SIMPLE_TEMPL(type)                                                                          \
-    class type : public BlockTempl<type##_T, BD_##type> {                                             \
-    public: type(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) : \
-    BlockTempl(_block_io, _var_name, (bd_cstring) #type, _count, _parent) {}}
-
-DECL_SIMPLE_TEMPL(CHAR);
-DECL_SIMPLE_TEMPL(UCHAR);
-DECL_SIMPLE_TEMPL(WORD);
-DECL_SIMPLE_TEMPL(DWORD);
-DECL_SIMPLE_TEMPL(QWORD);
-DECL_SIMPLE_TEMPL(DOUBLE);
+// Simple type templates
+#define BD_DECL_BLOCK_TYPE(name, type)                                                                       \
+        class name : public BlockTempl<name##_T, BD_##name> {                                                \
+        public: name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) : \
+        BlockTempl(_block_io, _var_name, (bd_cstring) #name, _count, _parent) {}};
+#include "block_types_decl.h"
 
 bool operator ==(const CHAR& val1, const char* val2);
 
