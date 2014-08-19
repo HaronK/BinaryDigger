@@ -7,27 +7,29 @@
 
 BD_C_EXTERN_BEGIN
 
+#define BD_BLOCK_TYPES \
+    BD_BLOCK_TYPE_DECL(CHAR,   bd_i8)  \
+    BD_BLOCK_TYPE_DECL(UCHAR,  bd_u8)  \
+    BD_BLOCK_TYPE_DECL(WORD,   bd_i16) \
+    BD_BLOCK_TYPE_DECL(DWORD,  bd_i32) \
+    BD_BLOCK_TYPE_DECL(QWORD,  bd_i64) \
+    BD_BLOCK_TYPE_DECL(DOUBLE, bd_f64)
+
 typedef enum
 {
     BD_TEMPL  = 0, // user defined template
     BD_STRUCT = 1, // user defined plain structure
 
     // simple types
-    BD_CHAR,
-    BD_UCHAR,
-    BD_WORD,
-    BD_DWORD,
-    BD_QWORD,
-    BD_DOUBLE,
+#define BD_BLOCK_TYPE_DECL(name, type) BD_##name,
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
 } bd_block_type;
 
 // Template types
-typedef bd_i8  CHAR_T;
-typedef bd_u8  UCHAR_T;
-typedef bd_i16 WORD_T;
-typedef bd_i32 DWORD_T;
-typedef bd_i64 QWORD_T;
-typedef bd_f64 DOUBLE_T;
+#define BD_BLOCK_TYPE_DECL(name, type) typedef type name##_T;
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
 
 typedef struct bd_block_io
 {
