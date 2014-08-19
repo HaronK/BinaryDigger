@@ -17,7 +17,7 @@
 #define THROW(msg, ...) throw BlockTemplException(msg, __VA_ARGS__)
 #define REQUIRE(cond, msg, ...) if (!cond) THROW(msg, __VA_ARGS__)
 
-// Registering user defined structure
+// Register user defined structure
 //#define REGISTER_STRUCT(name) const int BD_##name = BD_STRUCT;
 
 #define ARR(type, var, count, ...) \

@@ -130,6 +130,9 @@ public:
         return val;
     }
 
+    template<class T>
+    bool operator == (const T& val);
+
 protected:
     bd_block_io *block_io;
 
