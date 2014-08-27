@@ -1,4 +1,6 @@
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 qt5_wrap_ui(UI_HEADERS
     mainwindow.ui
     searchdialog.ui

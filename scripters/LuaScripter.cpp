@@ -273,9 +273,9 @@ luabind::scope register_simple_templ(const std::string& name)
 }
 
 template<>
-bd_block* TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* blob, bd_cstring script)
+bd_block* TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstring script)
 {
-    bd_require_not_null(blob, "Parameter 'blob' is null");
+    bd_require_not_null(block_io, "Parameter 'blob' is null");
 
     // Create a new lua state
     lua_State* L = luaL_newstate();
@@ -302,7 +302,7 @@ bd_block* TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* blob, bd_cstring sc
         register_simple_templ<DOUBLE>("double")
     ];
 
-    LuaTempl* templ = new LuaTempl(blob, (bd_cstring) "bd", (bd_cstring) "LuaScript", 0, 0);
+    LuaTempl* templ = new LuaTempl(block_io, (bd_cstring) "bd", (bd_cstring) "LuaScript", 0, 0);
 
     setRootTempl(L, templ);
     setCurrentTempl(L, templ);

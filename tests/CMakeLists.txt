@@ -1,11 +1,15 @@
 
 include_directories("${BinaryDigger_SOURCE_DIR}/core")
 
+enable_testing()
+
 file(GLOB tests "*.cpp")
 foreach(test_file ${tests})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
-    target_link_libraries(${test_name} PocoFoundation)
+    target_link_libraries(${test_name} PocoFoundation bd_utils)
+    
+    add_test(NAME bd_${test_name} COMMAND ${test_name})
     
 #    file(GLOB plugins "../plugins/*.cpp")
 #    foreach(plugin_file ${plugins})

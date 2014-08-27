@@ -13,11 +13,11 @@
 #include <Poco/AutoPtr.h>
 #include <Poco/SharedLibrary.h>
 #include <Poco/Exception.h>
-#include <Poco/FileStream.h>
 
 #include <iostream>
 
 #include <bd.h>
+#include "../utils/default_block_io.h"
 
 
 using Poco::Util::Application;
@@ -30,102 +30,6 @@ using Poco::SharedLibrary;
 using Poco::AutoPtr;
 
 
-// ---------------------------------------------------------------------------------------
-struct FileTemplBlob : bd_block_io
-{
-    FileTemplBlob(const std::string& path);
-    ~FileTemplBlob();
-
-    Poco::FileStream dataFile;
-};
-
-bd_result _get_pos(bd_block_io *self, bd_u64 *_pos)
-{
-    FileTemplBlob *blob = (FileTemplBlob *)self;
-    try
-    {
-        *_pos = blob->dataFile.tellg();
-    }
-    catch (const std::ios_base::failure&)
-    {
-        return -1;
-    }
-    return BD_SUCCESS;
-}
-
-bd_result _set_pos(bd_block_io *self, bd_u64 pos)
-{
-    FileTemplBlob *blob = (FileTemplBlob *)self;
-    try
-    {
-        blob->dataFile.seekg(pos);
-    }
-    catch (const std::ios_base::failure&)
-    {
-        return -1;
-    }
-    return BD_SUCCESS;
-}
-
-bd_result _shift_pos(bd_block_io *self, bd_u64 offset)
-{
-    FileTemplBlob *blob = (FileTemplBlob *)self;
-    try
-    {
-        blob->dataFile.seekg(offset, std::ios_base::cur);
-    }
-    catch (const std::ios_base::failure&)
-    {
-        return -1;
-    }
-    return BD_SUCCESS;
-}
-
-bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val)
-{
-    FileTemplBlob *blob = (FileTemplBlob *)self;
-    try
-    {
-        blob->dataFile.read((char*)val, size);
-    }
-    catch (const std::ios_base::failure&)
-    {
-        return -1;
-    }
-    return BD_SUCCESS;
-}
-
-bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val)
-{
-    FileTemplBlob *blob = (FileTemplBlob *)self;
-    try
-    {
-        std::streampos cur_pos = blob->dataFile.tellg();
-        blob->dataFile.seekg(pos);
-        blob->dataFile.read((char*)val, size);
-        blob->dataFile.seekg(cur_pos);
-    }
-    catch (const std::ios_base::failure&)
-    {
-        return -1;
-    }
-    return BD_SUCCESS;
-}
-
-FileTemplBlob::FileTemplBlob(const std::string& path) : dataFile(path, std::ios::in)
-{
-    // TODO: set correct internal state flags for dataFile if needed
-
-    get_pos   = _get_pos;
-    set_pos   = _set_pos;
-    shift_pos = _shift_pos;
-    get_data  = _get_data;
-    get_datap = _get_datap;
-}
-
-FileTemplBlob::~FileTemplBlob()
-{
-}
 // ---------------------------------------------------------------------------------------
 
 #define DT_EXEC_CHECK(plugin, func, msg) {\
@@ -355,7 +259,7 @@ protected:
         return BD_SUCCESS;
     }
 
-    bd_result applyTemplate(PluginInfo& pluginInfo, FileTemplBlob& templBlob, bd_block **item)
+    bd_result applyTemplate(PluginInfo& pluginInfo, bd_default_block_io& templBlob, bd_block **item)
     {
         freeTemplate(pluginInfo, *item);
 
@@ -384,7 +288,7 @@ protected:
         return BD_SUCCESS;
     }
 
-    void dumpTree(std::ostream& output, FileTemplBlob& templBlob, const bd_block *item, const std::string& indent = "")
+    void dumpTree(std::ostream& output, bd_default_block_io& templBlob, const bd_block *item, const std::string& indent = "")
     {
         if (item == 0)
         {
@@ -457,7 +361,7 @@ protected:
             // 2. Dump each file
             for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
             {
-                FileTemplBlob templBlob(*it);
+                bd_default_block_io templBlob(*it);
                 bd_block *item = NULL;
 
                 // 1. Apply plugin to the file

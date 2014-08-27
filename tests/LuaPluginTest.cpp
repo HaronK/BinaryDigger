@@ -11,83 +11,10 @@
 
 #include <iostream>
 
+#include "../utils/default_block_io.h"
+
 #include <Poco/SharedLibrary.h>
-#include <Poco/Path.h>
-#include <Poco/FileStream.h>
-#include "Poco/BinaryReader.h"
 
-bd_result _get_pos(bd_block_io *self, bd_u64 *_pos);
-bd_result _set_pos(bd_block_io *self, bd_u64 pos);
-bd_result _shift_pos(bd_block_io *self, bd_u64 offset);
-bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val);
-bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val);
-
-struct file_templ_blob : public bd_block_io
-{
-    file_templ_blob(const char *file_path)
-        : dataFile(file_path, std::ios::in)
-    {
-        get_pos   = _get_pos;
-        set_pos   = _set_pos;
-        shift_pos = _shift_pos;
-        get_data  = _get_data;
-        get_datap = _get_datap;
-    }
-
-    ~file_templ_blob()
-    {
-        dataFile.close();
-    }
-
-    Poco::FileInputStream dataFile;
-};
-
-bd_result _get_pos(bd_block_io *self, bd_u64 *_pos)
-{
-    file_templ_blob *blob = (file_templ_blob *)self;
-    *_pos = blob->dataFile.tellg();
-    return blob->dataFile.fail() ? -1 : BD_SUCCESS;
-}
-
-bd_result _set_pos(bd_block_io *self, bd_u64 pos)
-{
-    file_templ_blob *blob = (file_templ_blob *)self;
-    blob->dataFile.seekg(pos, std::ios_base::beg);
-    return blob->dataFile.fail() ? -1 : BD_SUCCESS;
-}
-
-bd_result _shift_pos(bd_block_io *self, bd_u64 offset)
-{
-    file_templ_blob *blob = (file_templ_blob *)self;
-    blob->dataFile.seekg(offset, std::ios_base::cur);
-    return blob->dataFile.fail() ? -1 : BD_SUCCESS;
-}
-
-bd_result _get_data(bd_block_io *self, bd_u64 size, bd_pointer val)
-{
-    file_templ_blob *blob = (file_templ_blob *)self;
-    blob->dataFile.read((char *)val, size);
-    return blob->dataFile.fail() ? -1 : BD_SUCCESS;
-}
-
-bd_result _get_datap(bd_block_io *self, bd_u64 pos, bd_u64 size, bd_pointer val)
-{
-    file_templ_blob *blob = (file_templ_blob *)self;
-
-    bd_u64 cur_pos = blob->dataFile.tellg();
-
-    blob->dataFile.seekg(pos, std::ios_base::beg);
-    if (blob->dataFile.fail())
-        return -1;
-
-    blob->dataFile.read((char *)val, size);
-    if (blob->dataFile.fail())
-        return -1;
-
-    // restore original position
-    blob->dataFile.seekg(cur_pos, std::ios_base::beg);
-    return blob->dataFile.fail() ? -1 : BD_SUCCESS;
-}
 
 struct PluginLibrary
 {
@@ -187,7 +114,8 @@ int main(int argc, char* argv[])
 
     std::cout << "Plugin " << name << " initialized. Available " << templ_count << " template(s)." << std::endl;
 
-    file_templ_blob blob(argc > 1 ? argv[1] : "data1.npk");
+    std::string dataFile = argc > 1 ? argv[1] : "data1.npk";
+    bd_default_block_io blob(dataFile);
     bd_block *root_item;
 
     bd_result res = pl.plugin.apply_template(0, &blob, &root_item, (bd_cstring) "hd.CHAR('kkk')");

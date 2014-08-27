@@ -5,7 +5,7 @@ file(GLOB tools "*.cpp")
 foreach(tool_file ${tools})
     get_filename_component(tool_name ${tool_file} NAME_WE)
     add_executable(${tool_name} ${tool_file})
-    target_link_libraries(${tool_name} PocoFoundation PocoUtil)
+    target_link_libraries(${tool_name} PocoFoundation PocoUtil bd_utils)
     
 #    file(GLOB plugins "../plugins/*.cpp")
 #    foreach(plugin_file ${plugins})

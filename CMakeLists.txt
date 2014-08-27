@@ -6,7 +6,7 @@ project(BinaryDigger)
 
 #set(CMAKE_USER_MAKE_RULES_OVERRIDE CMakeClang.txt)
 
-#add_definitions(-std=c++11)
+add_definitions(-std=c++0x)
 #add_definitions(-stdlib=libc++)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -v -E")
@@ -27,7 +27,9 @@ set(BinaryDigger_PluginsFolder "${BinaryDigger_PackageFolder}/plugins/")
 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BinaryDigger_PluginsFolder})
 # ----------------------------------------------------------------------------------------
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories("${BinaryDigger_SOURCE_DIR}/include" ${Poco_INCLUDE_DIR})
+
 link_directories(${Poco_LIBRARY_DIRS})
 
 # Solving problem with linking unused static library.
@@ -42,6 +44,7 @@ add_subdirectory(plugins)
 add_subdirectory(scripters)
 add_subdirectory(tests)
 add_subdirectory(tools)
+add_subdirectory(utils)
 add_subdirectory(server) # "${BinaryDigger_BINARY_DIR}/server"
 
 # installation
