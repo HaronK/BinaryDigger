@@ -17,13 +17,14 @@ BD_C_EXTERN_BEGIN
 
 typedef enum
 {
-    BD_TEMPL  = 0, // user defined template
-    BD_STRUCT = 1, // user defined plain structure
+    BD_TEMPL = 0, // user defined template
 
     // simple types
 #define BD_BLOCK_TYPE_DECL(name, type) BD_##name,
     BD_BLOCK_TYPES
 #undef BD_BLOCK_TYPE_DECL
+
+    BD_STRUCT, // user defined plain structure
 } bd_block_type;
 
 // Template types
@@ -80,8 +81,8 @@ typedef bd_result (*bd_result_message_t)(bd_result result, bd_string msg, bd_u32
  * @param templ_count [OUT] Return registered plugin templetes count.
  * @return Result code @see(bd_result) for details
  */
-BD_EXPORT bd_result bd_initialize_plugin(bd_string *name, bd_u32 *templ_count);
-typedef bd_result (*bd_initialize_plugin_t)(bd_string *name, bd_u32 *templ_count);
+BD_EXPORT bd_result bd_initialize_plugin(bd_string name, bd_u32 name_size, bd_u32 *templ_count);
+typedef bd_result (*bd_initialize_plugin_t)(bd_string name, bd_u32 name_size, bd_u32 *templ_count);
 
 /**
  * Retrieve template name by index.
@@ -90,8 +91,8 @@ typedef bd_result (*bd_initialize_plugin_t)(bd_string *name, bd_u32 *templ_count
  * @param name [OUT] Template name
  * @return Result code @see(bd_result) for details
  */
-BD_EXPORT bd_result bd_template_name(bd_u32 index, bd_string *name);
-typedef bd_result (*bd_template_name_t)(bd_u32 index, bd_string *name);
+BD_EXPORT bd_result bd_template_name(bd_u32 index, bd_string name, bd_u32 name_size);
+typedef bd_result (*bd_template_name_t)(bd_u32 index, bd_string name, bd_u32 name_size);
 
 /**
  * Apply template to the blob data and return items hierarchy.

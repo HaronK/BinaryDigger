@@ -1,23 +1,6 @@
 
 # ----------------------------------------------------------------------------------------
 
-find_package(Lua REQUIRED)
-
-if(NOT LUA_FOUND)
-    message(FATAL_ERROR "Cannot find Lua package")
-endif()
-
-#message("LUA_LIBRARIES:      ${LUA_LIBRARIES}")
-#message("LUA_INCLUDE_DIR:    ${LUA_INCLUDE_DIR}")
-#message("LUA_VERSION_STRING: ${LUA_VERSION_STRING}")
-#message("LUA_VERSION_MAJOR:  ${LUA_VERSION_MAJOR}")
-#message("LUA_VERSION_MINOR:  ${LUA_VERSION_MINOR}")
-#message("LUA_VERSION_PATCH:  ${LUA_VERSION_PATCH}")
-
-include_directories(${LUA_INCLUDE_DIR})
-
-# ----------------------------------------------------------------------------------------
-
 find_package(Luabind)
 
 if(NOT LUABIND_FOUND)

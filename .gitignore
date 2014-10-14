@@ -4,3 +4,8 @@
 .pydevproject
 build/*
 server
+/build_work
+/build
+.metadata
+.settings
+doc

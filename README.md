@@ -136,6 +136,9 @@ Configuration can contain several sections:
 
 #### Lua scripter
 
+To compile Lua scripter you should update as described
+[here](http://stackoverflow.com/questions/23574323/why-cant-i-catch-a-luabinderror-exception-when-my-lua-code-throws-an-error).
+Otherwise exceptions from Luabind will not be catched and program terminates.
 
 ## Development tools.
 

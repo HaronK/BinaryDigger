@@ -7,92 +7,106 @@
 
 #include "default_plugin.h"
 
-extern void register_plugin(bd_string *name, RegisteredTemplates& templ, bool& is_scripter);
+extern void register_plugin(std::string &name, bool &is_scripter);
 
-std::string __lastError;
-RegisteredTemplates registeredTemplates;
+PluginContext::array_type PluginContext::registeredTemplates;
+std::string PluginContext::error;
 
 bd_result bd_result_message(bd_result result, bd_string msg, bd_u32 msg_size)
 {
-    if (msg == 0)
-        return -1;
-    strncpy(msg, __lastError.c_str(), msg_size);
+    bd_check_not_null(msg);
+
+    auto len = std::min((size_t) msg_size - 1, PluginContext::getError().length());
+    strncpy(msg, PluginContext::getError().c_str(), len);
+    msg[len] = '\0';
+
     return BD_SUCCESS;
 }
 
-bd_result bd_initialize_plugin(bd_string *name, bd_u32 *templ_count)
+bd_result bd_initialize_plugin(bd_string name, bd_u32 name_size, bd_u32 *templ_count)
 {
-    if (name == 0)
-        return -1;
-    if (templ_count == 0)
-        return -1;
+    bd_check_not_null(name);
+    bd_check_not_null(templ_count);
 
-    bool is_scripter = false;
+    auto is_scripter = false;
+
     try
     {
-        register_plugin(name, registeredTemplates, is_scripter);
+        auto plugin_name = std::string();
+        register_plugin(plugin_name, is_scripter);
+        bd_check_and_return(name_size >= plugin_name.size() - 1, "Plugin name buffer is too small");
+
+        strncpy(name, plugin_name.c_str(), plugin_name.size());
+        name[plugin_name.size()] = '\0';
     }
     catch (const BlockTemplException& ex)
     {
-        __lastError = ex.getMessage();
+        PluginContext::setError(ex.getMessage());
         return ex.getResult();
     }
-    *templ_count = is_scripter ? 0 : registeredTemplates.size();
+
+    *templ_count = is_scripter ? 0 : PluginContext::getTemplatesCount();
+
     return BD_SUCCESS;
 }
 
-bd_result bd_template_name(bd_u32 index, bd_string *name)
+bd_result bd_template_name(bd_u32 index, bd_string name, bd_u32 name_size)
 {
-    if (name == 0)
-        return -1;
-    if (index >= registeredTemplates.size())
-        return -1;
-    *name = (bd_string) registeredTemplates[index]->getName();
+    bd_check_not_null(name);
+    bd_check_index(index);
+
+    auto templ_name = PluginContext::getTemplate(index)->getName();
+    bd_check_and_return(name_size >= templ_name.size() - 1, "Template name buffer is too small");
+
+    strncpy(name, templ_name.c_str(), templ_name.size());
+    name[templ_name.size()] = '\0';
+
     return BD_SUCCESS;
 }
 
 bd_result bd_apply_template(bd_u32 index, bd_block_io *block_io, bd_block **block, bd_cstring script)
 {
-    if (block_io == 0)
-        return -1;
-    if (block == 0)
-        return -1;
-    if (index >= registeredTemplates.size())
-        return -1;
+    bd_check_not_null(block_io);
+    bd_check_not_null(block);
+    bd_check_index(index);
+
+    auto result = bd_result{BD_SUCCESS};
     try
     {
-        *block = registeredTemplates[index]->applyTemplate(block_io, script);
+        auto err = std::string();
+        result = PluginContext::getTemplate(index)->applyTemplate(block_io, script, block, err);
+        PluginContext::setError(err);
     }
     catch (const BlockTemplException& ex)
     {
-        __lastError = ex.getMessage();
-        return ex.getResult();
+        PluginContext::setError(ex.getMessage());
+        result = ex.getResult();
     }
-    return BD_SUCCESS;
+    return result;
 }
 
 bd_result bd_free_template(bd_u32 index, bd_block *block)
 {
-    if (block == 0)
-        return -1;
-    if (index >= registeredTemplates.size())
-        return -1;
+    bd_check_not_null(block);
+    bd_check_index(index);
+
+    auto result = bd_result{BD_SUCCESS};
     try
     {
-        registeredTemplates[index]->freeTemplate(block);
+        auto err = std::string();
+        result = PluginContext::getTemplate(index)->freeTemplate(block, err);
+        PluginContext::setError(err);
     }
     catch (const BlockTemplException& ex)
     {
-        __lastError = ex.getMessage();
-        return ex.getResult();
+        PluginContext::setError(ex.getMessage());
+        result = ex.getResult();
     }
-    return BD_SUCCESS;
+    return result;
 }
 
 bd_result bd_finalize_plugin()
 {
-    for (RegisteredTemplates::iterator iter = registeredTemplates.begin();
-            iter != registeredTemplates.end(); ++iter)
-        delete *iter;
+    PluginContext::freeTemplates();
     return BD_SUCCESS;
 }

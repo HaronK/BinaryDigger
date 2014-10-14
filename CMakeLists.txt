@@ -6,7 +6,7 @@ project(BinaryDigger)
 
 #set(CMAKE_USER_MAKE_RULES_OVERRIDE CMakeClang.txt)
 
-add_definitions(-std=c++0x)
+add_definitions(-std=c++11)
 #add_definitions(-stdlib=libc++)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -v -E")
@@ -14,11 +14,18 @@ add_definitions(-std=c++0x)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
-find_package(Poco)
+find_package(Poco REQUIRED)
 
 if(NOT Poco_FOUND)
     message(FATAL_ERROR "Cannot find Poco package")
 endif()
+
+find_package(Lua REQUIRED)
+
+if(NOT LUA_FOUND)
+    message(FATAL_ERROR "Cannot find Lua package")
+endif()
+
 
 # ----------------------------------------------------------------------------------------
 set(BinaryDigger_PackageFolder "${BinaryDigger_BINARY_DIR}/package/")
@@ -28,7 +35,10 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${BinaryDigger_Plugin
 # ----------------------------------------------------------------------------------------
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories("${BinaryDigger_SOURCE_DIR}/include" ${Poco_INCLUDE_DIR})
+include_directories("${BinaryDigger_SOURCE_DIR}/include"
+                    "${BinaryDigger_SOURCE_DIR}/utils"
+                     ${LUA_INCLUDE_DIR}
+                     ${Poco_INCLUDE_DIR})
 
 link_directories(${Poco_LIBRARY_DIRS})
 

@@ -15,6 +15,7 @@
 #include <stdarg.h>
 
 #include <bd.h>
+#include <demangle.h>
 
 #include <Poco/Format.h>
 
@@ -87,6 +88,21 @@ public:
 
     ~BlockTemplBase();
 
+    bd_cstring getName() const
+    {
+        return name;
+    }
+
+    bd_block_type getType() const
+    {
+        return type;
+    }
+
+    bool isArray() const
+    {
+        return is_array == BD_TRUE;
+    }
+
     bd_u64 getSize() const
     {
         return size;
@@ -109,29 +125,43 @@ public:
         bd_result_throw_f(block_io->shift_pos(block_io, offset), "Cannot shift position on %llu", offset);
     }
 
-    const BlockTemplBase& getBlock(const char* block_name, bd_u32 index = 0) const;
+    BlockTemplBase* get(const char *block_name, bd_u32 index = 0) const;
 
-    template<class T>
-    const T& operator [](bd_u32 index)
+    const BlockTemplBase& getBlock(const char *block_name, bd_u32 index = 0) const
     {
-        bd_require_true(is_array == BD_TRUE, "Cannot access non array element by index");
-        bd_require_false_f(index < count, "Index out of bounds: %u >= %u", index, count);
-        bd_require_false_f(size == sizeof(T),
-                "Sizes of current element and requested one are not equal: %llu != %u", size, sizeof(T));
-
-        if (type == BD_TEMPL)
-        {
-            return (T) *(children_vec[index]);
-        }
-
-        // simple type
-        T val;
-        get_data(offset + index * sizeof(T), sizeof(T), &val);
-        return val;
+        return *get(block_name, index);
     }
 
+#pragma GCC diagnostic ignored "-Wreturn-local-addr"
     template<class T>
-    bool operator == (const T& val);
+    inline T value() const
+    {
+        bd_require_true(type != BD_TEMPL, "Cannot get value of template object");
+
+        T val;
+        get_data(offset, sizeof(T), &val);
+        return val;
+    }
+#pragma GCC diagnostic pop
+
+    std::string getString() const;
+
+    bd_block_io* getBlockIo() { return block_io; }
+
+    void getData(void* val) const
+    {
+        bd_require_true(type != BD_TEMPL, "Cannot get data of template object");
+
+        get_data(offset, size, val);
+    }
+
+    // casting operators
+#define BD_BLOCK_TYPE_DECL(name, tp)                                                                                 \
+        operator tp() const {                                                                                        \
+            bd_require_true_f(type == BD_##name, "Cannot cast value of template object of type %d to " #name, type); \
+            tp val; get_data(offset, sizeof(tp), &val); return val; }
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
 
 protected:
     bd_block_io *block_io;
@@ -166,101 +196,32 @@ template<class T, bd_block_type _type = BD_TEMPL>
 class BlockTempl : public BlockTemplBase
 {
 public:
-    typedef BlockTempl<T, _type> class_type;
-    typedef T value_type;
-
-//    BlockTempl(bd_block_io* _blob, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent)
-//        : BlockTemplBase(_blob, _var_name, (bd_cstring) typeid(T).name(), _type, sizeof(T), _count, _parent)
-//    {
-//    }
+    BlockTempl(bd_block_io* _blob, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent)
+        : BlockTemplBase(_blob, _var_name, (bd_cstring) get_type_name<T>().c_str(), _type, sizeof(T), _count, _parent)
+    {
+    }
 
     BlockTempl(bd_block_io* _block_io, bd_cstring _var_name, bd_cstring _type_name, bd_u32 _count, BlockTemplBase* _parent)
         : BlockTemplBase(_block_io, _var_name, _type_name, _type, sizeof(T), _count, _parent)
     {
     }
 
-    const T& operator ()() const
+    inline T value() const
     {
-        bd_require_true(is_array == BD_FALSE, "Cannot get value of array element");
-        bd_require_true(type != BD_TEMPL, "Cannot get value of template element");
-
-        return value();
-    }
-
-    const T& operator [](bd_u32 i)
-    {
-        return BlockTemplBase::operator []<T>(i);
-    }
-
-    void getData(void* val) const
-    {
-        bd_require_true(type != BD_TEMPL, "Cannot get data of template object");
-
-        get_data(offset, size, val);
-    }
-
-#pragma GCC diagnostic ignored "-Wreturn-local-addr"
-    inline const T& value() const
-    {
-        bd_require_true(type != BD_TEMPL, "Cannot get value of template object");
-
-        T val;
-        get_data(offset, sizeof(T), &val);
-        return val;
-    }
-#pragma GCC diagnostic pop
-
-    template<class I>
-    bool operator ==(const I* other) const;
-
-    bool operator ==(const class_type& other) const
-    {
-        bd_require_true(is_array == BD_FALSE, "Cannot compare arrays");
-        bd_require_true(type != BD_TEMPL, "Cannot compare templates");
-
-        return value() == other.value();
-    }
-
-    template<class I>
-    const I& block(const char* _item, bd_u32 index = 0) const
-    {
-        const BlockTemplBase& templ = getBlock(_item, index);
-        return static_cast<const I&>(templ);
-    }
-
-    template<class I>
-    const I& valueOf(const char* block_name, bd_u32 index = 0) const
-    {
-        return block<I>(block_name, index).value();
+        return BlockTemplBase::value<T>();
     }
 
     void apply() {}
-
-    bd_block_io* getBlockIo() { return block_io; }
 };
 
 // Simple type templates
-#define BD_BLOCK_TYPE_DECL(name, type)                                                                          \
-        class name : public BlockTempl<name##_T, BD_##name> {                                                \
-        public: name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) : \
-        BlockTempl(_block_io, _var_name, (bd_cstring) #name, _count, _parent) {}};
+#define BD_BLOCK_TYPE_DECL(name, tp)                                                                                 \
+        class name : public BlockTempl<name##_T, BD_##name> {                                                        \
+        public: name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) :         \
+        BlockTempl(_block_io, _var_name, _count, _parent) {}};
     BD_BLOCK_TYPES
 #undef BD_BLOCK_TYPE_DECL
 
-bool operator ==(const CHAR& val1, const char* val2);
-
-class RegisteredTemplWrapper
-{
-    const char* type_name;
-
-public:
-    RegisteredTemplWrapper(const char* type_name) : type_name(type_name) {}
-    virtual ~RegisteredTemplWrapper() {}
-
-    const char* getName() { return type_name; }
-
-    virtual bd_block* applyTemplate(bd_block_io *block_io, bd_cstring script) = 0;
-    virtual void freeTemplate(bd_block *block) = 0;
-};
+bool operator ==(const BlockTemplBase& val1, const char* val2);
 
 #endif /* DEFAULT_TEMPL_BASE_H_ */

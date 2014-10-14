@@ -7,7 +7,7 @@ file(GLOB tests "*.cpp")
 foreach(test_file ${tests})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
-    target_link_libraries(${test_name} PocoFoundation bd_utils)
+    target_link_libraries(${test_name} PocoFoundation bd_utils lua)
     
     add_test(NAME bd_${test_name} COMMAND ${test_name})
     

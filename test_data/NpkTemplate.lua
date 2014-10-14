@@ -8,28 +8,28 @@ templ{"NpkFileEntry", function(dataOffset)
     dword{"blockLen"}
     dword{"entryFileOffset"}
     dword{"entryFileLength"}
-    dword{"entryNameLen"}
-    char{"entryName", entryNameLen}
+    word{"entryNameLen"}
+    char{"entryName", val{"entryNameLen"}}
 
-    local pos = bd:getPosition()
-    bd:setPosition(dataOffset + entryFileOffset)
-    
-    uchar{"data", entryFileLength}
-    
-    bd:setPosition(pos)
+--    local pos = bd:getPosition()
+--    bd:setPosition(dataOffset + val{"entryFileOffset"})
+--    
+--    uchar{"data", val{"entryFileLength"}}
+--    
+--    bd:setPosition(pos)
 end}
 
 --function NpkEntry(dataOffset) end
 
 templ{"NpkDirEntry", function(dataOffset)
     dword{"blockLen"}
-    dword{"entryNameLen"}
-    char{"entryName", entryNameLen}
+    word{"entryNameLen"}
+    char{"entryName", val{"entryNameLen"}}
 
     local subEntriesCount = 0
     while true do
         NpkEntry{"entry", {dataOffset}, open = true}
-        if entry["tag"] == "DNED" then
+        if val{"entry.tag"} == "DNED" then
             break
         end
         subEntriesCount = subEntriesCount + 1
@@ -38,6 +38,7 @@ end}
 
 templ{"NpkEntry", function(dataOffset)
     char{"tag", 4}
+    local tag = val{"tag"}
     if tag == "_RID" then -- DIR_
         NpkDirEntry{"dir", {dataOffset}, open = true}
     elseif tag == "ELIF" then -- FILE
@@ -54,8 +55,8 @@ end}
 
 templ{"Npk", function()
     NpkHeader{"npkHeader"}
-    NpkEntry{"npkEntries", {self.npkHeader["dataOffset"] + 8}, open = true}
---    NpkDataHeader{"npkDataHeader"}
+    NpkEntry{"npkEntries", {val{"npkHeader.dataOffset"} + 8}, open = true}
+    NpkDataHeader{"npkDataHeader"}
 end}
 
 Npk{"npk"}

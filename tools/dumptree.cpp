@@ -221,18 +221,17 @@ protected:
 
     bd_result initializePlugin(PluginInfo& pluginInfo)
     {
-        bd_string name = 0;
+        bd_char name[256];
         bd_u32 templ_count;
 
-        DT_EXEC_CHECK(pluginInfo.plugin, initialize_plugin(&name, &templ_count), "Cannot initialize plugin");
+        DT_EXEC_CHECK(pluginInfo.plugin, initialize_plugin(name, sizeof(name), &templ_count), "Cannot initialize plugin");
 
         pluginInfo.pluginName = name;
         pluginInfo.isScripter = templ_count == 0;
 
         for (bd_u32 i = 0; i < templ_count; ++i)
         {
-            bd_string name;
-            DT_EXEC_CHECK_F(pluginInfo.plugin, template_name(i, (bd_string*)&name), "Cannot retrieve template name: %d", i);
+            DT_EXEC_CHECK_F(pluginInfo.plugin, template_name(i, name, sizeof(name)), "Cannot retrieve template name: %d", i);
 
             pluginInfo.templates.push_back(name);
         }

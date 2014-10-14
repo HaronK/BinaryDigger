@@ -151,20 +151,19 @@ void MainWindow::loadPlugins()
 
 void MainWindow::initializePlugin(PluginLibrary &pl)
 {
-    bd_string name = 0;
+    bd_char name[256];
     bd_u32 templ_count;
 
-    BD_CHECK(pl.plugin, initialize_plugin(&name, &templ_count), tr("Cannot initialize plugin"));
+    BD_CHECK(pl.plugin, initialize_plugin(name, sizeof(name), &templ_count), tr("Cannot initialize plugin"));
 
     pl.pluginName = name;
-    pl.isScripter = templ_count == 0;
+    pl.isScripter = (templ_count == 0);
 
     for (bd_u32 i = 0; i < templ_count; ++i)
     {
-        bd_string name;
-        BD_CHECK(pl.plugin, template_name(i, (bd_string*)&name), tr("Cannot retrieve template name: %1").arg(i));
+        BD_CHECK(pl.plugin, template_name(i, name, sizeof(name)), tr("Cannot retrieve template name: %1").arg(i));
 
-        pl.templates << name;
+        pl.templates.append(name);
     }
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Plugin initialized."), QMessageBox::Ok);
 }
@@ -191,9 +190,21 @@ void MainWindow::applyTemplate(bd_block *block)
 
     templBlob.dataFile->seek(0);
 
-    BD_CHECK(plugins[pluginIndex].plugin,
-             apply_template(templIndex, &templBlob, &block, script.empty() ? 0 :(bd_cstring) script.c_str()),
-             tr("Could not apply template 0"));
+//    BD_CHECK(plugins[pluginIndex].plugin,
+//             apply_template(templIndex, &templBlob, &block, script.empty() ? 0 :(bd_cstring) script.c_str()),
+//             tr("Could not apply template 0"));
+
+    bd_result res = plugins[pluginIndex].plugin.apply_template(templIndex, &templBlob, &block,
+                                                               script.empty() ? 0 :(bd_cstring) script.c_str());
+    if (res != BD_SUCCESS)
+    {
+        char buf[1024]; \
+        plugins[pluginIndex].plugin.result_message(res, (bd_string) buf, sizeof(buf));
+
+        QMessageBox::critical(this, tr("Script: ") + curScriptFile,
+                              tr("%1\n%2").arg(tr("Could not apply template 0")).arg(buf), QMessageBox::Ok);
+//        throw BDException(tr("%1\n%2").arg(tr("Could not apply template 0")).arg(buf));
+    }
 
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template applied successfully."), QMessageBox::Ok);
 

@@ -177,9 +177,9 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    bd_string name = 0;
+    bd_char name[256];
     bd_u32 templ_count;
-    if (!BD_SUCCEED(pl.plugin.initialize_plugin(&name, &templ_count)))
+    if (!BD_SUCCEED(pl.plugin.initialize_plugin(name, sizeof(name), &templ_count)))
     {
         std::cerr << "Could not initialize plugin " << file << std::endl;
         return -1;
