@@ -8,13 +8,14 @@
 #include "block_templ_base.h"
 
 BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstring _type_name, bd_block_type _type,
-        bd_u64 _size, bd_u32 _count, BlockTemplBase *_parent)
+        bd_u64 _size, bd_u32 _count, BlockTemplBase *_parent, const bd_property_records &props)
 {
-    block_io  = _block_io;
-    name      = strdup(_name);
-    type_name = strdup(_type_name);
-    type      = _type;
-    parent    = _parent;
+    block_io         = _block_io;
+    name             = strdup(_name);
+    type_name        = strdup(_type_name);
+    type             = _type;
+    parent           = _parent;
+    templ_properties = props;
 
     children.child = 0;
     children.count = 0;
@@ -41,7 +42,7 @@ BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstr
         for (auto i = 0; i < count; ++i)
         {
             // add single element
-            new BlockTemplBase(_block_io, _name, _type_name, _type, _size, 0, this);
+            new BlockTemplBase(_block_io, _name, _type_name, _type, _size, 0, this, props);
         }
 
         bd_u64 pos = getPosition();
@@ -120,6 +121,47 @@ std::string BlockTemplBase::getString() const
     delete[] str;
 
     return result;
+}
+
+std::string BlockTemplBase::to_string()
+{
+    if (is_array == BD_TRUE)
+    {
+        if (type == BD_CHAR)
+            return getString();
+        return "<array>";
+    }
+
+    switch (getType())
+    {
+    case BD_TEMPL:
+        return "<templ>";
+#define BD_BLOCK_TYPE_DECL(name, tp) \
+    case BD_##name: {                \
+        auto val = (tp) *this;       \
+        return std::to_string(val); }
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
+    }
+
+    return "<undef>";
+}
+
+bd_property BlockTemplBase::get_property(const std::string &name)
+{
+    if (obj_properties.find(name) != obj_properties.end())
+        return obj_properties[name];
+
+    if (templ_properties.find(name) != templ_properties.end())
+        return templ_properties[name];
+
+    if (parent != nullptr)
+        return ((BlockTemplBase *) parent)->get_property(name);
+
+    if (default_property.find(name) != default_property.end())
+        return default_property[name];
+
+    return bd_property();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

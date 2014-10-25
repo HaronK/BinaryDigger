@@ -8,11 +8,11 @@
 #ifndef HIERARCHYDIGGERMACRO_H_
 #define HIERARCHYDIGGERMACRO_H_
 
-#include "block_templ_base.h"
+#include "block_templ.h"
 #include <demangle.h>
 
 #define VAL(var) var->value()
-#define GET(obj, type, field) const type##_T field = (type##_T) obj->getBlock(#field)
+#define GET(obj, type, field) type##_T field = (type##_T) obj->getBlock(#field)
 // TODO: implement local variables
 //#define LOCAL(name, val)
 
@@ -23,7 +23,7 @@
 //#define REGISTER_STRUCT(name) const int BD_##name = BD_STRUCT;
 
 #define ARR(type, var, count, ...) \
-    auto var = new type(block_io, (bd_cstring) #var, count, this); var->apply(__VA_ARGS__)
+    auto var = new type(block_io, (bd_cstring) #var, count, this, bd_property_records()); var->apply(__VA_ARGS__)
 #define VAR(type, var, ...) ARR(type, var, 0, __VA_ARGS__)
 
 // -----------------------------------------------------------------------------------------
@@ -32,12 +32,14 @@
 
 #define TEMPL_DECL(templ_name, ...)                                                                       \
     class templ_name : public BlockTempl<templ_name> { public:                                            \
-        templ_name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent); \
+        templ_name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent,  \
+                const bd_property_records &props); \
         void apply(__VA_ARGS__); };
 
 #define TEMPL_IMPL(templ_name, ...)                                                                              \
-    templ_name::templ_name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent) \
-        : BlockTempl(_block_io, _var_name, _count, _parent) {}                                                   \
+    templ_name::templ_name(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent, \
+            const bd_property_records &props) \
+        : BlockTempl(_block_io, _var_name, _count, _parent, props) {}                                                   \
     void templ_name::apply(__VA_ARGS__) {
 
 #define TEMPL(templ_name, ...)          \
@@ -64,6 +66,7 @@ public:
 
     std::string getName() { return type_name; }
 
+    // TODO: specify properties
     virtual bd_result applyTemplate(bd_block_io *block_io, bd_cstring script, bd_block **result, std::string &err) noexcept = 0;
     virtual bd_result freeTemplate(bd_block *block, std::string &err) noexcept = 0;
 
@@ -127,7 +130,7 @@ public:
 
         try
         {
-            auto val = new T(block_io, (bd_cstring) "root", 0, 0);
+            auto val = new T(block_io, (bd_cstring) "root", 0, 0, bd_property_records());
             val->apply();
 
             *result = val;

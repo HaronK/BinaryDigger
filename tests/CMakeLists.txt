@@ -1,6 +1,4 @@
 
-include_directories("${BinaryDigger_SOURCE_DIR}/core")
-
 enable_testing()
 
 file(GLOB tests "*.cpp")

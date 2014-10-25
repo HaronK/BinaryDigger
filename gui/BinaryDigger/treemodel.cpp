@@ -7,8 +7,8 @@
 
 #include <BDException.h>
 
-TreeModel::TreeModel(const QStringList &headers, bd_block_io *block_io, const bd_block *root_block, QObject *parent)
-    : QAbstractItemModel(parent), block_io(block_io), hdRootBlock(root_block)
+TreeModel::TreeModel(const QStringList &headers, bd_plugin *plugin, bd_block_io *block_io, const bd_block *root_block, QObject *parent)
+    : QAbstractItemModel(parent), plugin(plugin), block_io(block_io), hdRootBlock(root_block)
 {
     QVector<QVariant> rootData;
     foreach (QString header, headers)
@@ -226,73 +226,94 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
     }
     else // char array or array element
     {
-        bd_u64 offset = block->offset + (index == (bd_u32)-1 ? 0 : index * block->elem_size);
-        switch (block->type)
+        bd_u32 buf_size = 100;
+
+        if (block->is_array == BD_TRUE && block->type == BD_CHAR)
         {
-        case BD_CHAR:
+            buf_size = block->size + 1;
+        }
+
+        bd_string buf = new bd_char[buf_size];
+
+        bd_result res = plugin->get_string_value((bd_block *) block, buf, buf_size);
+        if (!(res == BD_SUCCESS))
         {
-            char *data = new char[block->count + 1];
-            if (!BD_SUCCEED(block_io->get_datap(block_io, block->offset, block->size, data)))
-            {
-                throw BDException(tr("Could not read single CHAR or CHAR array"));
-            }
-            data[block->count] = '\0';
-            str = QString("\"%1\"").arg(data);
-            break;
+            char buf[1024];
+            plugin->result_message(res, (bd_string) buf, sizeof(buf));
+            throw BDException(tr("%1\n%2").arg(tr("Cannot get string representation of block value")).arg(buf));
         }
-        case BD_UCHAR:
-            {
-                unsigned char data;
-                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-                {
-                    throw BDException(tr("Could not read UCHAR"));
-                }
-                str = QString("%1").arg(data);
-            }
-            break;
-        case BD_WORD:
-            {
-                WORD_T data;
-                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-                {
-                    throw BDException(tr("Could not read WORD"));
-                }
-                str = QString("%1").arg(data);
-            }
-            break;
-        case BD_DWORD:
-            {
-                DWORD_T data;
-                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-                {
-                    throw BDException(tr("Could not read DWORD"));
-                }
-                str = QString("%1").arg(data);
-            }
-            break;
-        case BD_QWORD:
-            {
-                QWORD_T data;
-                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-                {
-                    throw BDException(tr("Could not read QWORD"));
-                }
-                str = QString("%1").arg(data);
-            }
-            break;
-        case BD_DOUBLE:
-            {
-                DOUBLE_T data;
-                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-                {
-                    throw BDException(tr("Could not read DOUBLE"));
-                }
-                str = QString("%1").arg(data);
-            }
-            break;
-        default:
-            break;
-        }
+
+        str = buf;
+
+        delete[] buf;
+
+//        bd_u64 offset = block->offset + (index == (bd_u32)-1 ? 0 : index * block->elem_size);
+//        switch (block->type)
+//        {
+//        case BD_CHAR:
+//        {
+//            char *data = new char[block->count + 1];
+//            if (!BD_SUCCEED(block_io->get_datap(block_io, block->offset, block->size, data)))
+//            {
+//                throw BDException(tr("Could not read single CHAR or CHAR array"));
+//            }
+//            data[block->count] = '\0';
+//            str = QString("\"%1\"").arg(data);
+//            break;
+//        }
+//        case BD_UCHAR:
+//            {
+//                unsigned char data;
+//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
+//                {
+//                    throw BDException(tr("Could not read UCHAR"));
+//                }
+//                str = QString("%1").arg(data);
+//            }
+//            break;
+//        case BD_WORD:
+//            {
+//                WORD_T data;
+//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
+//                {
+//                    throw BDException(tr("Could not read WORD"));
+//                }
+//                str = QString("%1").arg(data);
+//            }
+//            break;
+//        case BD_DWORD:
+//            {
+//                DWORD_T data;
+//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
+//                {
+//                    throw BDException(tr("Could not read DWORD"));
+//                }
+//                str = QString("%1").arg(data);
+//            }
+//            break;
+//        case BD_QWORD:
+//            {
+//                QWORD_T data;
+//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
+//                {
+//                    throw BDException(tr("Could not read QWORD"));
+//                }
+//                str = QString("%1").arg(data);
+//            }
+//            break;
+//        case BD_DOUBLE:
+//            {
+//                DOUBLE_T data;
+//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
+//                {
+//                    throw BDException(tr("Could not read DOUBLE"));
+//                }
+//                str = QString("%1").arg(data);
+//            }
+//            break;
+//        default:
+//            break;
+//        }
     }
 
     child->setData(1, str); // Value

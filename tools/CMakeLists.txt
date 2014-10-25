@@ -1,6 +1,4 @@
 
-include_directories("${BinaryDigger_SOURCE_DIR}/core")
-
 file(GLOB tools "*.cpp")
 foreach(tool_file ${tools})
     get_filename_component(tool_name ${tool_file} NAME_WE)

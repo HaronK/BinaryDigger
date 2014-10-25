@@ -38,16 +38,18 @@ bd_result loadPlugin(const char* file, PluginLibrary *pl)
 
     pl->plugin.result_message    = (bd_result_message_t)    loadPluginFunction(pl->library, file, "bd_result_message");
     pl->plugin.initialize_plugin = (bd_initialize_plugin_t) loadPluginFunction(pl->library, file, "bd_initialize_plugin");
+    pl->plugin.finalize_plugin   = (bd_finalize_plugin_t)   loadPluginFunction(pl->library, file, "bd_finalize_plugin");
     pl->plugin.template_name     = (bd_template_name_t)     loadPluginFunction(pl->library, file, "bd_template_name");
     pl->plugin.apply_template    = (bd_apply_template_t)    loadPluginFunction(pl->library, file, "bd_apply_template");
     pl->plugin.free_template     = (bd_free_template_t)     loadPluginFunction(pl->library, file, "bd_free_template");
-    pl->plugin.finalize_plugin   = (bd_finalize_plugin_t)   loadPluginFunction(pl->library, file, "bd_finalize_plugin");
+    pl->plugin.get_string_value  = (bd_get_string_value_t)  loadPluginFunction(pl->library, file, "bd_get_string_value");
 
-    if (pl->plugin.initialize_plugin == 0 ||
-        pl->plugin.template_name     == 0 ||
-        pl->plugin.apply_template    == 0 ||
-        pl->plugin.free_template     == 0 ||
-        pl->plugin.finalize_plugin   == 0)
+    if (pl->plugin.initialize_plugin == nullptr ||
+        pl->plugin.finalize_plugin   == nullptr ||
+        pl->plugin.template_name     == nullptr ||
+        pl->plugin.apply_template    == nullptr ||
+        pl->plugin.free_template     == nullptr ||
+        pl->plugin.get_string_value  == nullptr)
     {
         pl->library.unload();
         return BD_ERROR;

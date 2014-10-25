@@ -14,11 +14,11 @@
 #include <Poco/SharedLibrary.h>
 #include <Poco/Exception.h>
 
-#include <iostream>
-
 #include <bd.h>
 #include "../utils/default_block_io.h"
 
+#include <iostream>
+#include <boost/scope_exit.hpp>
 
 using Poco::Util::Application;
 using Poco::Util::Option;
@@ -50,7 +50,6 @@ using Poco::AutoPtr;
         _errorMessage = Poco::format("Error:\n  %s\n  %s", err_msg, std::string(buf)); \
         return res; \
     } }
-
 
 class DumpTreeApp: public Application
 {
@@ -213,10 +212,11 @@ protected:
     {
         plugin.result_message    = (bd_result_message_t)    pluginLibrary.getSymbol("bd_result_message");
         plugin.initialize_plugin = (bd_initialize_plugin_t) pluginLibrary.getSymbol("bd_initialize_plugin");
+        plugin.finalize_plugin   = (bd_finalize_plugin_t)   pluginLibrary.getSymbol("bd_finalize_plugin");
         plugin.template_name     = (bd_template_name_t)     pluginLibrary.getSymbol("bd_template_name");
         plugin.apply_template    = (bd_apply_template_t)    pluginLibrary.getSymbol("bd_apply_template");
         plugin.free_template     = (bd_free_template_t)     pluginLibrary.getSymbol("bd_free_template");
-        plugin.finalize_plugin   = (bd_finalize_plugin_t)   pluginLibrary.getSymbol("bd_finalize_plugin");
+        plugin.get_string_value  = (bd_get_string_value_t)  pluginLibrary.getSymbol("bd_get_string_value");
     }
 
     bd_result initializePlugin(PluginInfo& pluginInfo)
@@ -258,9 +258,9 @@ protected:
         return BD_SUCCESS;
     }
 
-    bd_result applyTemplate(PluginInfo& pluginInfo, bd_default_block_io& templBlob, bd_block **item)
+    bd_result applyTemplate(PluginInfo& pluginInfo, bd_default_block_io& templBlob, bd_block **block)
     {
-        freeTemplate(pluginInfo, *item);
+        freeTemplate(pluginInfo, *block);
 
 //        templBlob.dataFile.seekg(0);
 
@@ -268,56 +268,78 @@ protected:
         bd_u32 templIndex = 0;
 
         DT_EXEC_CHECK_F(pluginInfo.plugin,
-                apply_template(templIndex, &templBlob, item, _scriptFile.empty() ? 0 : (bd_cstring) _scriptFile.c_str()),
+                apply_template(templIndex, &templBlob, block, _scriptFile.empty() ? 0 : (bd_cstring) _scriptFile.c_str()),
                 "Could not apply template %u", templIndex);
 
         return BD_SUCCESS;
     }
 
-    bd_result freeTemplate(PluginInfo& pluginInfo, bd_block *item)
+    bd_result freeTemplate(PluginInfo& pluginInfo, bd_block *block)
     {
-        if (item == 0)
+        if (block == 0)
             return BD_SUCCESS;
 
         // TODO: set correct template index
         bd_u32 templIndex = 0;
 
-        DT_EXEC_CHECK_F(pluginInfo.plugin, free_template(templIndex, item), "Could not free template %u", templIndex);
+        DT_EXEC_CHECK_F(pluginInfo.plugin, free_template(templIndex, block), "Could not free template %u", templIndex);
 
         return BD_SUCCESS;
     }
 
-    void dumpTree(std::ostream& output, bd_default_block_io& templBlob, const bd_block *item, const std::string& indent = "")
+    bd_result dumpTree(std::ostream& output, bd_plugin& plugin, bd_default_block_io& templBlob, const bd_block *block, const std::string& indent = "")
     {
-        if (item == 0)
+        if (block == 0)
         {
             output << indent << "NULL\n";
-            return;
+            return BD_SUCCESS;
         }
 
-        output << indent << item->type_name << "(" << item->type << ") " << item->name;
-        if (item->is_array == BD_TRUE)
+        output << indent << block->type_name << "(" << block->type << ") " << block->name;
+        if (block->is_array == BD_TRUE)
         {
-            output << "[" << item->count << "] (" << item->elem_size << "/" << item->size << ")";
+            output << "[" << block->count << "] (" << block->elem_size << "/" << block->size << ")";
+
+            if (block->type == BD_CHAR)
+            {
+                bd_u32 val_size = block->size + 1;
+                bd_string val = new bd_char[val_size];
+                BOOST_SCOPE_EXIT(&val)
+                {
+                    delete[] val;
+                }
+                BOOST_SCOPE_EXIT_END
+
+                DT_EXEC_CHECK(plugin, get_string_value((bd_block *) block, val, val_size), "Could not get string value");
+
+                output << ": \"" << val << "\"";
+            }
         }
         else
         {
-            output << "(" << item->size << ")";
+            output << "(" << block->size << "): ";
+
+            bd_char val[100];
+            DT_EXEC_CHECK(plugin, get_string_value((bd_block *) block, val, sizeof(val)), "Could not get value");
+
+            output << val;
         }
 
-        if (item->children.count > 0)
+        if (block->children.count > 0)
         {
-            output << " [" << item->children.count << "]:\n";
+            output << " [" << block->children.count << "]:\n";
 
-            for (bd_u32 i = 0; i < item->children.count; ++i)
+            for (bd_u32 i = 0; i < block->children.count; ++i)
             {
-                dumpTree(output, templBlob, item->children.child[i], indent + "  ");
+                dumpTree(output, plugin, templBlob, block->children.child[i], indent + "  ");
             }
         }
         else
         {
             output << "\n";
         }
+
+        return BD_SUCCESS;
     }
 
     int main(const std::vector<std::string>& args)
@@ -355,6 +377,7 @@ protected:
             showPluginInfo(pluginInfo);
         }
 
+        auto result = Application::EXIT_OK;
         if (args.size() > 0)
         {
             // 2. Dump each file
@@ -367,11 +390,15 @@ protected:
                 if (!BD_SUCCEED(applyTemplate(pluginInfo, templBlob, &item)))
                 {
                     poco_error(logger(), _errorMessage);
-                    return Application::EXIT_DATAERR;
+                    result = Application::EXIT_DATAERR;
                 }
 
                 // 2. Dump tree hierarchy
-                dumpTree(std::cout, templBlob, item);
+                if (!BD_SUCCEED(dumpTree(std::cout, pluginInfo.plugin, templBlob, item)))
+                {
+                    poco_error(logger(), _errorMessage);
+                    return Application::EXIT_DATAERR;
+                }
 
                 // 3. Cleanup tree
                 if (!BD_SUCCEED(freeTemplate(pluginInfo, item)))
@@ -388,14 +415,7 @@ protected:
             return Application::EXIT_DATAERR;
         }
 
-//        logger().information("Arguments to main():");
-//        for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
-//        {
-//            logger().information(*it);
-//        }
-//        logger().information("Application properties:");
-//        printProperties("");
-        return Application::EXIT_OK;
+        return result;
     }
 
     void printProperties(const std::string& base)

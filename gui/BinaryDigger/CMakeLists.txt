@@ -34,8 +34,8 @@ target_link_libraries(BinaryDigger ${Qt5Core_QTMAIN_LIBRARIES})
 add_custom_command(TARGET BinaryDigger POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                        $<TARGET_FILE:BinaryDigger>
-                       "${BinaryDigger_PackageFolder}"
-                   COMMENT "BinaryDigger copied to ${BinaryDigger_PackageFolder}"
+                       "${BD_PACKAGE_FOLDER}"
+                   COMMENT "BinaryDigger copied to ${BD_PACKAGE_FOLDER}"
                   )
 
 qt5_use_modules(BinaryDigger Core Gui Widgets)

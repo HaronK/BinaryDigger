@@ -46,5 +46,53 @@ enum bd_base_result_code
 };
 #define BD_SUCCEED(result) (result == BD_SUCCESS)
 
+#define BD_BLOCK_TYPES \
+    BD_BLOCK_TYPE_DECL(CHAR,   bd_i8)  \
+    BD_BLOCK_TYPE_DECL(UCHAR,  bd_u8)  \
+    BD_BLOCK_TYPE_DECL(WORD,   bd_i16) \
+    BD_BLOCK_TYPE_DECL(DWORD,  bd_i32) \
+    BD_BLOCK_TYPE_DECL(QWORD,  bd_i64) \
+    BD_BLOCK_TYPE_DECL(DOUBLE, bd_f64)
+
+typedef enum /*bd_block_type*/
+{
+    BD_TEMPL = 0, // user defined template
+
+    // simple types
+#define BD_BLOCK_TYPE_DECL(name, type) BD_##name,
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
+
+    BD_STRUCT, // user defined plain structure
+} bd_block_type;
+
+// Template types
+#define BD_BLOCK_TYPE_DECL(name, type) typedef type name##_T;
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
+
+//const char *get_block_type_name(bd_block_type type)
+//{
+//    switch (type)
+//    {
+//    case BD_TEMPL:
+//        return "TEMPL";
+//#define BD_BLOCK_TYPE_DECL(name, tp) \
+//    case BD_##name: {                \
+//        return #name; }
+//    BD_BLOCK_TYPES
+//#undef BD_BLOCK_TYPE_DECL
+//    }
+//    return "<UNDEF>";
+//}
+
+typedef enum /*bd_property_type*/
+{
+    BD_PROP_UNDEF,     // undefined
+    BD_PROP_INTEGER,   // bd_i32
+    BD_PROP_DOUBLE,    // bd_f64
+    BD_PROP_STRING,    // bd_string
+    BD_PROP_TO_STRING, // bd_result (*func)(bd_block *block, char *buf, bd_u32 size);
+} bd_property_type;
 
 #endif // BD_TYPES_H_

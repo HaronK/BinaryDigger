@@ -6,9 +6,11 @@
  */
 
 #include <string>
+#include <map>
 #include <algorithm>
-#include <ostream>
-
+#include <iostream>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 extern "C" {
 #include <lua.h>
 #include <lualib.h>
@@ -28,8 +30,9 @@ using namespace std;
 class LuaTempl: public BlockTempl<LuaTempl>
 {
 public:
-    LuaTempl(bd_block_io* _blob, bd_cstring _var_name, bd_cstring _templ_name, bd_u32 _count, BlockTemplBase* _parent)
-        : BlockTempl(_blob, _var_name, _templ_name, _count, _parent)
+    LuaTempl(bd_block_io* _blob, bd_cstring _var_name, bd_cstring _templ_name, bd_u32 _count, BlockTemplBase* _parent,
+            const bd_property_records &props)
+        : BlockTempl(_blob, _var_name, _templ_name, _count, _parent, props)
     {}
 };
 
@@ -129,35 +132,289 @@ void getLuaCurrentFunctionName(lua_State* L, string& func_name)
     }
 }
 
-void parse_apply_templ_params(const luabind::object& data, string& var_name, int& arr_size, luabind::object& params)
+auto lua_type_name = map<int, const char*>{
+    {LUA_TNONE,          "NONE"},
+    {LUA_TNIL,           "NIL"},
+    {LUA_TBOOLEAN,       "BOOLEAN"},
+    {LUA_TLIGHTUSERDATA, "LIGHTUSERDATA"},
+    {LUA_TNUMBER,        "NUMBER"},
+    {LUA_TSTRING,        "STRING"},
+    {LUA_TTABLE,         "TABLE"},
+    {LUA_TFUNCTION,      "FUNCTION"},
+    {LUA_TUSERDATA,      "USERDATA"},
+    {LUA_TTHREAD,        "THREAD"},
+//    {LUA_NUMTAGS,        "NUMTAGS"},
+};
+
+bool check_lua_type(const luabind::object &param, int type, string &err)
 {
-    bd_require_lua_type(LUA_TTABLE,  data);
-    bd_require_lua_type(LUA_TSTRING, data[1]);
-
-    DEBUG_OUTPUT("Data: " << tostring(data) << "\n");
-
-    var_name = luabind::object_cast<string>(data[1]);
-
-    auto i = 2;
-    if (luabind::type(data[i]) == LUA_TNUMBER)
+    if (luabind::type(param) != type)
     {
-        arr_size = (int) luabind::object_cast<int>(data[i]);
-        i++;
+        err = (boost::format("Property has wrong type. Expected: %1% but was %2%") %
+                             type % lua_type_name[luabind::type(param)]).str();
+        return false;
     }
+    return true;
+}
 
-    if (luabind::type(data[i]) == LUA_TTABLE)
+bool parse_property(const luabind::object &param, bd_property &result, string &err)
+{
+    switch (result.type)
     {
-        params = data[i];
+    case BD_PROP_INTEGER:
+        if (!check_lua_type(param, LUA_TNUMBER, err))
+            return false;
+        result.value.i = luabind::object_cast<bd_i32>(param);
+        return true;
+    case BD_PROP_DOUBLE:
+        if (!check_lua_type(param, LUA_TNUMBER, err))
+            return false;
+        result.value.d = luabind::object_cast<bd_f64>(param);
+        break;
+    case BD_PROP_STRING:
+    {
+        if (!check_lua_type(param, LUA_TSTRING, err))
+            return false;
+        auto val = luabind::object_cast<string>(param);
+        result = bd_property((bd_string) val.c_str());
+        break;
+    }
+    case BD_PROP_TO_STRING:
+        if (!check_lua_type(param, LUA_TFUNCTION, err))
+            return false;
+        // TODO: implement
+        break;
+    default:
+        err = (boost::format("Unsupported type: %1%") % result.type).str();
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Parse properties in a tail of a table that should be in a form:
+ *
+ *   { ..., endian = BdTempl.BIG_ENDIAN, to_string = function(obj) return "test" end}
+ *
+ * @param iter        Points to the first property.
+ * @param props [OUT] Properties
+ */
+void parse_properties(luabind::iterator &iter, bd_property_records &props)
+{
+    auto end = luabind::iterator();
+    for (; iter != end; ++iter)
+    {
+        // property name should be a string
+        if (luabind::type(iter.key()) != LUA_TSTRING)
+        {
+            // TODO: add warning about wrong property
+            continue;
+        }
+
+        auto name = luabind::object_cast<string>(iter.key());
+
+        // check if property is registered one
+        if (default_property.find(name) == default_property.end())
+        {
+            // TODO: add warning about unsupported property
+            continue; // TODO: just add user specified property for later usage
+        }
+
+        // get property
+        auto prop = bd_property();
+        prop.type = default_property[name].type;
+        string err;
+        if (!parse_property(*iter, prop, err))
+        {
+            // TODO: add warning with err message
+            continue;
+        }
+
+        props[name] = prop;
     }
 }
 
-void apply_templ_func(lua_State* L, LuaTempl* templ, const char* func_name, const luabind::object& params)
+/**
+ * Parse template block definition call. Examples:
+ *
+ * 1. Single block with optional properties:
+ *
+ *    Templ{"name" [, endian = BdTempl.BIG_ENDIAN, ...]}
+ *
+ * 2. Array block with optional properties:
+ *
+ *    Templ{"name", 3 [, endian = BdTempl.BIG_ENDIAN, ...]}
+ *
+ * 3. Template element that accept parameters (up to 10) with optional properties:
+ *
+ *    Templ{"name", {par1, par2, ... par10} [, endian = BdTempl.BIG_ENDIAN, ...]}
+ *
+ * 4. Array of template elements with optional properties. Each element accept parameters (up to 10):
+ *
+ *    Templ{"name", 3, {par1, par2, ... par10} [, endian = BdTempl.BIG_ENDIAN, ...]}
+ *
+ * @param data           Table to parse
+ * @param var_name [OUT] Template name
+ * @param arr_size [OUT] Array size if set
+ * @param params   [OUT] Template parameters if set
+ * @param props    [OUT] Template properties if set
+ */
+void parse_apply_templ_params(const luabind::object &data, string &var_name, int &arr_size, luabind::object &params,
+        bd_property_records &props)
+{
+    bd_require_lua_type(LUA_TTABLE,  data);
+
+    auto iter = luabind::iterator(data);
+    auto end = luabind::iterator();
+
+    // variable name
+    bd_require_lua_type(LUA_TSTRING, *iter);
+    var_name = luabind::object_cast<string>(*iter);
+    ++iter;
+
+    // array size
+    if (iter != end && luabind::type(iter.key()) == LUA_TNUMBER && luabind::type(*iter) == LUA_TNUMBER)
+    {
+        arr_size = (int) luabind::object_cast<int>(*iter);
+        ++iter;
+    }
+
+    // template parameters
+    if (iter != end && luabind::type(iter.key()) == LUA_TNUMBER)
+    {
+        bd_require_lua_type(LUA_TTABLE, *iter);
+        params = *iter;
+        ++iter;
+    }
+
+    // object properties
+    parse_properties(iter, props);
+
+    DEBUG_OUTPUT("Data: " << tostring(data) << "\n");
+}
+
+/**
+ * Call lua function with up to 10 parameters
+ *
+ * @param L         Lua state
+ * @param func_name Name of the lua function
+ * @param params    Parameters table
+ */
+void call_lua_function(lua_State* L, const string &func_name, const luabind::object &params)
+{
+    if (params.interpreter() == nullptr || luabind::type(params) != LUA_TTABLE)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), params);
+        return;
+    }
+
+    auto iter = luabind::iterator(params);
+    auto end = luabind::iterator();
+
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str());
+        return;
+    }
+
+    auto param0 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0);
+        return;
+    }
+
+    auto param1 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1);
+        return;
+    }
+
+    auto param2 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2);
+        return;
+    }
+
+    auto param3 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3);
+        return;
+    }
+
+    auto param4 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4);
+        return;
+    }
+
+    auto param5 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4, param5);
+        return;
+    }
+
+    auto param6 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4, param5, param6);
+        return;
+    }
+
+    auto param7 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4, param5, param6, param7);
+        return;
+    }
+
+    auto param8 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4, param5, param6, param7, param8);
+        return;
+    }
+
+    auto param9 = *iter;
+    ++iter;
+    if (iter == end)
+    {
+        luabind::call_function<void>(L, func_name.c_str(), param0, param1, param2, param3, param4, param5, param6, param7, param8, param9);
+        return;
+    }
+
+    throw BlockTemplException(boost::format("Luabind supports only up to 10 function parameters.").str());
+}
+
+/**
+ * Call 'apply' lua function associated with the template.
+ *
+ * @param L         Lua state
+ * @param templ     Template object
+ * @param func_name Name of the lua function
+ * @param params    Parameters table
+ */
+void apply_templ_func(lua_State *L, LuaTempl *templ, const string &func_name, const luabind::object &params)
 {
     DEBUG_OUTPUT("Apply templ func " << templ->type_name << "::" << templ->name << "." << func_name << " ...\n");
 
     auto prev = setCurrentTempl(L, templ);
 
-    luabind::call_function<void>(L, func_name, params);
+    call_lua_function(L, func_name, params);
 
     luabind::globals(L)["self"] = prev;
 
@@ -167,13 +424,20 @@ void apply_templ_func(lua_State* L, LuaTempl* templ, const char* func_name, cons
     DEBUG_OUTPUT("  applied " << templ->type_name << "::" << templ->name << "." << func_name << "\n");
 }
 
+/**
+ * Wrapper function that creates new template object.
+ *
+ * @param data Template creation data. See @see(parse_apply_templ_params) for details
+ * @return Pointer to the created object
+ */
 BlockTemplBase *apply_templ(const luabind::object& data)
 {
     auto var_name = string();
     auto arr_size = 0;
     auto params = luabind::object();
+    auto props = bd_property_records();
 
-    parse_apply_templ_params(data, var_name, arr_size, params);
+    parse_apply_templ_params(data, var_name, arr_size, params, props);
 
     auto L = data.interpreter();
 
@@ -186,20 +450,20 @@ BlockTemplBase *apply_templ(const luabind::object& data)
     auto cur_templ = getCurrentTempl(L);
     bd_require_not_null(cur_templ, "Current template is null");
 
-    // TODO: apply global template settings
-    auto settings_name = templ_name + "_settings";
-//    luabind::object global_templ_settings = luabind::globals(L)[settings_name];
-
-    // TODO: apply local template settings that are defined in 'data' table as named elements
+    auto templ_props_name = templ_name + "_props";
+    auto templ_props = luabind::object_cast<bd_property_records*>(luabind::globals(L)[templ_props_name]);
 
     auto templ = new LuaTempl(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(),
-            (bd_cstring) templ_name.c_str(), arr_size, cur_templ);
+            (bd_cstring) templ_name.c_str(), arr_size, cur_templ, *templ_props);
+
+    // set object properties
+    templ->set_properties(props);
 
     registerTemplVariable(L, templ, var_name);
 
     auto templ_func = templ_name + "_func";
 
-    apply_templ_func(L, templ, templ_func.c_str(), params);
+    apply_templ_func(L, templ, templ_func, params);
 
     DEBUG_OUTPUT("  applied " << templ_name << "::" << var_name << "\n");
 
@@ -207,21 +471,32 @@ BlockTemplBase *apply_templ(const luabind::object& data)
 }
 
 /**
- * Expecting 3 parameters:
- * 1. Template name.
- * 2. Template apply function.
- * 3. Other template parameters table.
+ * Backend for 'templ' lua function. Declares new template class. Example:
  *
- * @param obj Lua table object
+ *    templ{"name", function([params]) ... end [, endian = BdTempl.BIG_ENDIAN, ...]}
+ *
+ * @param data Table to parse
  */
 void register_templ(const luabind::object& data)
 {
-    bd_require_lua_type(LUA_TTABLE,    data);
-    bd_require_lua_type(LUA_TSTRING,   data[1]);
-    bd_require_lua_type(LUA_TFUNCTION, data[2]);
+    bd_require_lua_type(LUA_TTABLE, data);
 
-    auto templ_name = luabind::object_cast<string>(data[1]);
-    auto func = data[2];
+    auto iter = luabind::iterator(data);
+    auto end = luabind::iterator();
+
+    // template name
+    bd_require_lua_type(LUA_TSTRING, *iter);
+    auto templ_name = luabind::object_cast<string>(*iter);
+    ++iter;
+
+    // template 'apply' function
+    bd_require_lua_type(LUA_TFUNCTION, *iter);
+    auto func = *iter;
+    ++iter;
+
+    // template properties (optional)
+    auto props = new bd_property_records;
+    parse_properties(iter, *props);
 
     auto L = func.interpreter();
 
@@ -233,36 +508,31 @@ void register_templ(const luabind::object& data)
         luabind::def(templ_name.c_str(), &apply_templ)
     ];
 
-    // register template function
+    // register template 'apply' function
     auto templ_func = templ_name + "_func";
     luabind::globals(L)[templ_func] = func;
 
-    // register template parameters
-    auto templ_params = templ_name + "_settings";
-    luabind::globals(L)[templ_params] = data;
+    // register template properties
+    auto templ_props = templ_name + "_props";
+    luabind::globals(L)[templ_props] = props;
 
     DEBUG_OUTPUT("  created\n");
 }
 
-vector<string> split(const string &s, char delim)
-{
-    auto result = vector<string>();
-    stringstream ss(s);
-    auto item = string();
-    while (getline(ss, item, delim))
-    {
-        result.push_back(item);
-    }
-    return result;
-}
-
+/**
+ * Convert simple template value to the lua object.
+ *
+ * @param L     Lua state
+ * @param templ Template object
+ * @return Lua object
+ */
 luabind::object get_templ_value(lua_State *L, BlockTemplBase *templ)
 {
     switch (templ->getType())
     {
 #define BD_BLOCK_TYPE_DECL(name, tp)                                        \
     case BD_##name: {                                                       \
-        auto val = templ->value<tp>();                                      \
+        auto val = (tp) *templ;                                             \
         DEBUG_OUTPUT("Value " << templ->getName() << " = " << val << "\n"); \
         return luabind::object(L, val); }
     BD_BLOCK_TYPES
@@ -271,14 +541,24 @@ luabind::object get_templ_value(lua_State *L, BlockTemplBase *templ)
     bd_throw_f("Unsupported type: %d", templ->getType());
 }
 
+/**
+ * Backend for 'val' lua function. Usage examples:
+ *
+ *   val{"field1.field2[2].field3 ..."}
+ *   val{obj, "field.field2[2].field3 ..."}
+ *
+ * @param data Table of function parameters.
+ * @return Simple template value wrapped in lua object.
+ */
 luabind::object get_value(const luabind::object& data)
 {
     bd_require_lua_type(LUA_TTABLE, data);
 
-    BlockTemplBase *self;
     auto L = data.interpreter();
     auto paramsStr = string();
 
+    // get template object
+    BlockTemplBase *self;
     auto params_pos = 1;
     if (LUA_TSTRING == luabind::type(data[1]))
     {
@@ -300,10 +580,12 @@ luabind::object get_value(const luabind::object& data)
     {
         paramsStr = luabind::object_cast<string>(data[params_pos]);
 
-        auto params = split(paramsStr, '.');
+        auto params = vector<string>();
+        boost::split(params, paramsStr, boost::is_any_of("."));
+
         for (auto param : params)
         {
-            // TODO: trim param
+            boost::trim(param);
             if (param.empty())
                 continue;
 
@@ -331,37 +613,74 @@ luabind::object get_value(const luabind::object& data)
     return get_templ_value(L, templ);
 }
 
+/**
+ * Wrapper function that creates new simple template object.
+ *
+ * @param data Template creation data. See @see(parse_apply_templ_params) for details
+ * @return Pointer to the created object
+ */
 template<class T>
-void apply_simple_templ(const luabind::object& data)
+BlockTemplBase *apply_simple_templ(const luabind::object& data)
 {
     auto var_name = string();
     auto arr_size = 0;
     auto params = luabind::object();
+    auto props = bd_property_records();
 
-    parse_apply_templ_params(data, var_name, arr_size, params);
+    parse_apply_templ_params(data, var_name, arr_size, params, props);
+
+    DEBUG_OUTPUT("Apply simple templ " << get_type_name<T>() << "." << var_name << " ...");
 
     auto L = data.interpreter();
 
     auto cur_templ = getCurrentTempl(L);
     bd_require_not_null(cur_templ, "Current template is null");
 
-    DEBUG_OUTPUT("Apply simple templ " << get_type_name<T>() << "." << var_name << " ...");
+    auto templ = new T(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(), arr_size, cur_templ, bd_property_records());
 
-    // TODO: apply local template settings that are defined in 'data' table as named elements
-
-    auto templ = new T(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(), arr_size, cur_templ);
+    // set object properties
+    templ->set_properties(props);
 
     registerTemplVariable(L, templ, var_name);
 
     DEBUG_OUTPUT("  applied\n");
+
+    return templ;
 }
 
+/**
+ * Registers lua function for simple template object creation.
+ *
+ * @param name Template name.
+ * @return Luabind scope
+ */
 template<class T>
 luabind::scope register_simple_templ(const string& name)
 {
     return luabind::def(name.c_str(), &apply_simple_templ<T>);
 }
 
+/**
+ * Backend for 'check_bit' lua function. Checks bit of the value.
+ *
+ * @param value Value to check.
+ * @param pos   Bit position in the value.
+ * @return true if bit is set otherwise false
+ */
+bool check_bit(int value, int pos)
+{
+    return (value & (1 << pos)) != 0;
+}
+
+/**
+ * TemplWrapper::applyTemplate method specialization for LuaTempl object.
+ *
+ * @param block_io       Block IO object.
+ * @param script         Script text.
+ * @param result   [OUT] Created blocks hierarchy.
+ * @param err      [OUT] Error message.
+ * @return BD_SUCCESS if template was successfully applied otherwise error code.
+ */
 template<>
 bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstring script, bd_block **result, std::string &err) noexcept
 {
@@ -386,9 +705,17 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
         luabind::module(L)
         [
             luabind::class_<bd_block_io>("TemplBlob"),
+            luabind::class_<bd_property_records>("Properties"),
             luabind::class_<BlockTemplBase>("BdTempl")
                 .def("getPosition", &BlockTemplBase::getPosition)
-                .def("setPosition", &BlockTemplBase::setPosition),
+                .def("setPosition", &BlockTemplBase::setPosition)
+                .enum_("endian")
+                [
+                    luabind::value("LIT_ENDIAN", BD_ENDIAN_LIT),
+                    luabind::value("BIG_ENDIAN", BD_ENDIAN_BIG)
+                ],
+
+            luabind::def("check_bit", &check_bit),
 
             luabind::def("templ", &register_templ),
             luabind::def("val",   &get_value),
@@ -400,7 +727,8 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
             register_simple_templ<DOUBLE>("double")
         ];
 
-        templ = new LuaTempl(block_io, (bd_cstring) "bd", (bd_cstring) "LuaScript", 0, 0);
+        // TODO: specify properties
+        templ = new LuaTempl(block_io, (bd_cstring) "bd", (bd_cstring) "LuaScript", 0, 0, bd_property_records());
 
         *result = templ;
 
@@ -447,6 +775,12 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
     return result_code;
 }
 
+/**
+ * Adds LuaTempl wrapper to the list of registered templates.
+ *
+ * @param name        Template name (LuaScripter).
+ * @param is_scripter Shows that plugin accepts script (true for LuaScripter).
+ */
 void register_plugin(string &name, bool &is_scripter)
 {
     is_scripter = true;

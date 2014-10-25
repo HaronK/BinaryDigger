@@ -14,7 +14,7 @@ class TreeModel : public QAbstractItemModel
     Q_OBJECT
 
 public:
-    TreeModel(const QStringList &headers, bd_block_io *block_io, const bd_block *root_block,
+    TreeModel(const QStringList &headers, bd_plugin *plugin, bd_block_io *block_io, const bd_block *root_block,
               QObject *parent = 0);
     ~TreeModel();
 
@@ -57,6 +57,7 @@ public:
 private:
     void setupModelData(const QStringList &lines, TreeItem<UserData> *parent);
 
+    bd_plugin *plugin;
     bd_block_io *block_io;
     TreeItem<UserData> *rootItem;
 

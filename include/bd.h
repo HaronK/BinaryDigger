@@ -7,31 +7,6 @@
 
 BD_C_EXTERN_BEGIN
 
-#define BD_BLOCK_TYPES \
-    BD_BLOCK_TYPE_DECL(CHAR,   bd_i8)  \
-    BD_BLOCK_TYPE_DECL(UCHAR,  bd_u8)  \
-    BD_BLOCK_TYPE_DECL(WORD,   bd_i16) \
-    BD_BLOCK_TYPE_DECL(DWORD,  bd_i32) \
-    BD_BLOCK_TYPE_DECL(QWORD,  bd_i64) \
-    BD_BLOCK_TYPE_DECL(DOUBLE, bd_f64)
-
-typedef enum
-{
-    BD_TEMPL = 0, // user defined template
-
-    // simple types
-#define BD_BLOCK_TYPE_DECL(name, type) BD_##name,
-    BD_BLOCK_TYPES
-#undef BD_BLOCK_TYPE_DECL
-
-    BD_STRUCT, // user defined plain structure
-} bd_block_type;
-
-// Template types
-#define BD_BLOCK_TYPE_DECL(name, type) typedef type name##_T;
-    BD_BLOCK_TYPES
-#undef BD_BLOCK_TYPE_DECL
-
 typedef struct bd_block_io
 {
     bd_result (*get_pos)   (bd_block_io *self, bd_u64 *pos);
@@ -64,11 +39,35 @@ typedef struct bd_block
     } children;
 } bd_block;
 
+typedef struct bd_message
+{
+    bd_result  code;  // message result code
+    bd_cstring msg;   // message text
+    bd_pointer block; // block to which this message relates
+    bd_u32     count; // number of occurrences of this message (to avoid duplications)
+} bd_message;
+
+typedef struct bd_messages
+{
+    bd_message *message; // array of messages
+    bd_u16      count;   // number of messages
+} bd_messages;
+
+/**
+ * Get last operation messages.
+ *
+ * @param messages [OUT] Array of messages.
+ * @return Result code @see(bd_result) for details
+ */
+BD_EXPORT bd_result bd_get_messages(bd_messages **messages);
+typedef bd_result (*bd_get_messages_t)(bd_messages **messages);
+
 /**
  * Get text message by its result code.
  *
- * @param result Result code.
- * @param msg [OUT] Message string.
+ * @param result    Result code.
+ * @param msg [OUT] Message buffer.
+ * @param msg_size  Message buffer size.
  * @return Result code @see(bd_result) for details
  */
 BD_EXPORT bd_result bd_result_message(bd_result result, bd_string msg, bd_u32 msg_size);
@@ -77,7 +76,7 @@ typedef bd_result (*bd_result_message_t)(bd_result result, bd_string msg, bd_u32
 /**
  * Initialize plugin.
  *
- * @param name Plugin name.
+ * @param name              Plugin name.
  * @param templ_count [OUT] Return registered plugin templetes count.
  * @return Result code @see(bd_result) for details
  */
@@ -85,9 +84,17 @@ BD_EXPORT bd_result bd_initialize_plugin(bd_string name, bd_u32 name_size, bd_u3
 typedef bd_result (*bd_initialize_plugin_t)(bd_string name, bd_u32 name_size, bd_u32 *templ_count);
 
 /**
+ * Finalize plugin.
+ *
+ * @return Result code @see(bd_result) for details
+ */
+BD_EXPORT bd_result bd_finalize_plugin();
+typedef bd_result (*bd_finalize_plugin_t)();
+
+/**
  * Retrieve template name by index.
  *
- * @param index Template index
+ * @param index      Template index
  * @param name [OUT] Template name
  * @return Result code @see(bd_result) for details
  */
@@ -116,21 +123,30 @@ BD_EXPORT bd_result bd_free_template(bd_u32 index, bd_block *block);
 typedef bd_result (*bd_free_template_t)(bd_u32 index, bd_block *block);
 
 /**
- * Finalize plugin.
+ * Get string representation of block value. Can be applied only to the basic types: int, string, ...
  *
+ * @param block       Blocks item
+ * @param buf   [OUT] Result buffer
+ * @param size        Result buffer size
  * @return Result code @see(bd_result) for details
  */
-BD_EXPORT bd_result bd_finalize_plugin();
-typedef bd_result (*bd_finalize_plugin_t)();
+BD_EXPORT bd_result bd_get_string_value(bd_block *block, bd_string buf, bd_u32 size);
+typedef bd_result (*bd_get_string_value_t)(bd_block *block, bd_string buf, bd_u32 size);
 
-typedef struct
+
+typedef struct bd_plugin
 {
-    bd_result_message_t    result_message;
+    bd_get_messages_t      get_messages;
+    bd_result_message_t    result_message; // obsolete
+
     bd_initialize_plugin_t initialize_plugin;
+    bd_finalize_plugin_t   finalize_plugin;
+
     bd_template_name_t     template_name;
     bd_apply_template_t    apply_template;
     bd_free_template_t     free_template;
-    bd_finalize_plugin_t   finalize_plugin;
+
+    bd_get_string_value_t  get_string_value;
 } bd_plugin;
 
 BD_C_EXTERN_END

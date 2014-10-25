@@ -1,7 +1,15 @@
 
 # ----------------------------------------------------------------------------------------
 
-find_package(Luabind)
+# Lua
+find_package(Lua REQUIRED)
+
+if(NOT LUA_FOUND)
+    message(FATAL_ERROR "Cannot find Lua package")
+endif()
+
+# Luabind
+find_package(Luabind REQUIRED)
 
 if(NOT LUABIND_FOUND)
     message(FATAL_ERROR "Cannot find Luabind package")
@@ -11,12 +19,9 @@ endif()
 #message("LUABIND_INCLUDE_DIRS: ${LUABIND_INCLUDE_DIRS}")
 #message("LUABIND_LIBRARIES:    ${LUABIND_LIBRARIES}")
 
-include_directories(${LUABIND_INCLUDE_DIRS})
+include_directories(${LUA_INCLUDE_DIR} ${LUABIND_INCLUDE_DIRS})
 
 # ----------------------------------------------------------------------------------------
-
-include_directories("${BinaryDigger_SOURCE_DIR}/default_plugin")
-link_directories("${BinaryDigger_BINARY_DIR}/default_plugin")
 
 file(GLOB plugins "*.cpp")
 foreach(plugin_file ${plugins})
@@ -34,8 +39,8 @@ foreach(plugin_file ${plugins})
     add_custom_command(TARGET ${plugin_name} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy
                            $<TARGET_FILE:${plugin_name}>
-                           "${BinaryDigger_PluginsFolder}"
-                       COMMENT "${plugin_name} copied to ${BinaryDigger_PluginsFolder}"
+                           "${BD_PLUGINS_FOLDER}"
+                       COMMENT "${plugin_name} copied to ${BD_PLUGINS_FOLDER}"
                       )
 endforeach()
 

@@ -116,11 +116,12 @@ bd_result loadPlugin(const char* file, PluginLibrary *pl)
     pl->plugin.free_template     = (bd_free_template_t)     loadPluginFunction(pl->library, file, "bd_free_template");
     pl->plugin.finalize_plugin   = (bd_finalize_plugin_t)   loadPluginFunction(pl->library, file, "bd_finalize_plugin");
 
-    if (pl->plugin.initialize_plugin == 0 ||
-        pl->plugin.template_name     == 0 ||
-        pl->plugin.apply_template    == 0 ||
-        pl->plugin.free_template     == 0 ||
-        pl->plugin.finalize_plugin   == 0)
+    if (pl->plugin.initialize_plugin == nullptr ||
+        pl->plugin.finalize_plugin   == nullptr ||
+        pl->plugin.template_name     == nullptr ||
+        pl->plugin.apply_template    == nullptr ||
+        pl->plugin.free_template     == nullptr ||
+        pl->plugin.get_string_value  == nullptr)
     {
         pl->library.unload();
         return BD_ERROR;

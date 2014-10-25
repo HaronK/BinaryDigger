@@ -92,10 +92,11 @@ void MainWindow::loadPlugin(PluginLibrary &pl)
     {
         pl.plugin.result_message    = (bd_result_message_t)    loadPluginFunction(pl.library, "bd_result_message");
         pl.plugin.initialize_plugin = (bd_initialize_plugin_t) loadPluginFunction(pl.library, "bd_initialize_plugin");
+        pl.plugin.finalize_plugin   = (bd_finalize_plugin_t)   loadPluginFunction(pl.library, "bd_finalize_plugin");
         pl.plugin.template_name     = (bd_template_name_t)     loadPluginFunction(pl.library, "bd_template_name");
         pl.plugin.apply_template    = (bd_apply_template_t)    loadPluginFunction(pl.library, "bd_apply_template");
         pl.plugin.free_template     = (bd_free_template_t)     loadPluginFunction(pl.library, "bd_free_template");
-        pl.plugin.finalize_plugin   = (bd_finalize_plugin_t)   loadPluginFunction(pl.library, "bd_finalize_plugin");
+        pl.plugin.get_string_value  = (bd_get_string_value_t)  loadPluginFunction(pl.library, "bd_get_string_value");
     }
     catch (const BDException &/*ex*/)
     {
@@ -208,7 +209,7 @@ void MainWindow::applyTemplate(bd_block *block)
 
 //        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template applied successfully."), QMessageBox::Ok);
 
-    treeModel = new TreeModel(treeModelHeaders, &templBlob, block);
+    treeModel = new TreeModel(treeModelHeaders, &plugins[pluginIndex].plugin, &templBlob, block);
     treeView->setModel(treeModel);
 
     resizeTreeColumns();

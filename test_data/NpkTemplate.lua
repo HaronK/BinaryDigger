@@ -1,3 +1,4 @@
+
 templ{"NpkHeader", function()
     char{"tag", 4}
     dword{"blockLen"}
@@ -11,15 +12,13 @@ templ{"NpkFileEntry", function(dataOffset)
     word{"entryNameLen"}
     char{"entryName", val{"entryNameLen"}}
 
---    local pos = bd:getPosition()
---    bd:setPosition(dataOffset + val{"entryFileOffset"})
---    
---    uchar{"data", val{"entryFileLength"}}
---    
---    bd:setPosition(pos)
+    local pos = bd:getPosition()
+    bd:setPosition(dataOffset + val{"entryFileOffset"})
+    
+    uchar{"data", val{"entryFileLength"}}
+    
+    bd:setPosition(pos)
 end}
-
---function NpkEntry(dataOffset) end
 
 templ{"NpkDirEntry", function(dataOffset)
     dword{"blockLen"}

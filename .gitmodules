@@ -1,0 +1,12 @@
+[submodule "external/Selene"]
+	path = external/Selene
+	url = /home/oleg/Downloads/Programming/Languages/Lua/Selene
+[submodule "external/sol"]
+	path = external/sol
+	url = /home/oleg/Downloads/Programming/Languages/Lua/sol
+[submodule "external/Catch"]
+	path = external/Catch
+	url = /home/okhryptul/Downloads/Programming/Languages/Lua/Catch
+[submodule "external/boost_endian"]
+	path = external/boost_endian
+	url = https://github.com/boostorg/endian.git
