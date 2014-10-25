@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <boost/endian/conversion.hpp>
 
 #include <bd.h>
 #include <demangle.h>

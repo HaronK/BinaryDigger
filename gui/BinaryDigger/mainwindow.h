@@ -60,8 +60,8 @@ private:
     void loadPlugins();
 
     void initializePlugin(PluginLibrary &pl);
-    void applyTemplate(bd_block *block);
-    void freeTemplate(bd_block *block);
+    void applyTemplate(bd_block **block);
+    void freeTemplate(bd_block **block);
     void finalizePlugin(PluginLibrary &pl);
 
     void resizeTreeColumns();
@@ -76,7 +76,7 @@ protected:
 
 private slots:
     void treeItemExpanded();
-    void treeItemSelected();
+    void treeItemSelected(const QModelIndex &selected, const QModelIndex &deselected);
     void pluginTemplActivated();
 
 private slots:
@@ -107,6 +107,8 @@ private:
     void createStatusBar();
     void createToolBars();
 
+    void initTreeViewChangeSelection();
+
     void loadFile(const QString &fileName);
     bool saveFile(const QString &fileName);
     void setCurrentFile(const QString &fileName);
@@ -119,9 +121,11 @@ private:
     QString strippedName(const QString &fullFileName);
     void writeSettings();
 
-    QString curFile;
+    QString dataFolder;
+    QString dataFile;
     bool isUntitled;
 
+    QString scriptFolder;
     QString curScriptFile;
     bool isScriptUntitled;
 

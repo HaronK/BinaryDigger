@@ -40,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent)
     catch (const BDException &ex)
     {
         QMessageBox::warning(this, tr("Plugin: "), tr(ex.what()), QMessageBox::Ok);
-//        qApp->closeAllWindows();
     }
 }
 
@@ -48,7 +47,7 @@ MainWindow::~MainWindow()
 {
     try
     {
-        freeTemplate(rootBlock);
+        freeTemplate(&rootBlock);
     }
     catch (const BDException &ex)
     {
@@ -141,7 +140,6 @@ void MainWindow::loadPlugins()
             QMessageBox::warning(this, tr("Plugin: %1").arg(pl.file), tr(ex.what()), QMessageBox::Ok);
             continue;
         }
-//        QMessageBox::information(this, tr("Load plugin: ") + pl.file, tr("Plugin loaded.") + pl.templates.size(), QMessageBox::Ok);
         pluginIndex++;
     }
     if (pluginIndex == 0)
@@ -166,15 +164,12 @@ void MainWindow::initializePlugin(PluginLibrary &pl)
 
         pl.templates.append(name);
     }
-//        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Plugin initialized."), QMessageBox::Ok);
 }
 
-void MainWindow::applyTemplate(bd_block *block)
+void MainWindow::applyTemplate(bd_block **block)
 {
-    if (pluginIndex == -1)
+    if (pluginIndex == -1 || block == NULL)
         return;
-    if (block != 0)
-        throw BDException(tr("Item is not 0"));
 
     if (templBlob.dataFile.isNull() || !templBlob.dataFile->isOpen())
     {
@@ -187,15 +182,11 @@ void MainWindow::applyTemplate(bd_block *block)
     std::string script;
 
     if (plugins[pluginIndex].isScripter)
-        script = curScriptFile.toStdString(); //scriptWidget->toPlainText().toLatin1().data();
+        script = curScriptFile.toStdString();
 
     templBlob.dataFile->seek(0);
 
-//    BD_CHECK(plugins[pluginIndex].plugin,
-//             apply_template(templIndex, &templBlob, &block, script.empty() ? 0 :(bd_cstring) script.c_str()),
-//             tr("Could not apply template 0"));
-
-    bd_result res = plugins[pluginIndex].plugin.apply_template(templIndex, &templBlob, &block,
+    bd_result res = plugins[pluginIndex].plugin.apply_template(templIndex, &templBlob, block,
                                                                script.empty() ? 0 :(bd_cstring) script.c_str());
     if (res != BD_SUCCESS)
     {
@@ -204,28 +195,27 @@ void MainWindow::applyTemplate(bd_block *block)
 
         QMessageBox::critical(this, tr("Script: ") + curScriptFile,
                               tr("%1\n%2").arg(tr("Could not apply template 0")).arg(buf), QMessageBox::Ok);
-//        throw BDException(tr("%1\n%2").arg(tr("Could not apply template 0")).arg(buf));
     }
 
-//        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template applied successfully."), QMessageBox::Ok);
-
-    treeModel = new TreeModel(treeModelHeaders, &plugins[pluginIndex].plugin, &templBlob, block);
+    treeModel = new TreeModel(treeModelHeaders, &plugins[pluginIndex].plugin, &templBlob, *block);
     treeView->setModel(treeModel);
+    initTreeViewChangeSelection();
 
     resizeTreeColumns();
 }
 
-void MainWindow::freeTemplate(bd_block *block)
+void MainWindow::freeTemplate(bd_block **block)
 {
-    if (pluginIndex == -1 || block == 0)
+    if (pluginIndex == -1 || block == NULL || *block == NULL)
         return;
 
-    if (!BD_SUCCEED(plugins[pluginIndex].plugin.free_template(templIndex, block)))
+    if (!BD_SUCCEED(plugins[pluginIndex].plugin.free_template(templIndex, *block)))
     {
         // TODO: duplication looks not very nice. Use BOOST_SCOPE_EXIT or equivalent
         treeView->setModel(0);
         pluginIndex = -1;
         templIndex = 0;
+        *block = NULL;
 
         throw BDException(tr("Could not free template 0"));
     }
@@ -233,15 +223,12 @@ void MainWindow::freeTemplate(bd_block *block)
     treeView->setModel(0);
     pluginIndex = -1;
     templIndex = 0;
-
-//        QMessageBox::information(this, tr("Plugin: ") + dataFile, tr("Template freed successfully."), QMessageBox::Ok);
+    *block = NULL;
 }
 
 void MainWindow::finalizePlugin(PluginLibrary &pl)
 {
     BD_CHECK(pl.plugin, finalize_plugin(), tr("Could not finalize plugin."));
-
-//        QMessageBox::information(this, tr("Plugin: ") + pl.file, tr("Plugin successfully finalized."), QMessageBox::Ok);
 }
 
 void MainWindow::treeItemExpanded()
@@ -249,8 +236,10 @@ void MainWindow::treeItemExpanded()
     resizeTreeColumns();
 }
 
-void MainWindow::treeItemSelected()
+void MainWindow::treeItemSelected(const QModelIndex &selected, const QModelIndex &deselected)
 {
+    Q_UNUSED(selected);
+    Q_UNUSED(deselected);
     QModelIndex curIndex = treeView->selectionModel()->currentIndex();
     if (!curIndex.isValid())
         return;
@@ -275,7 +264,7 @@ void MainWindow::pluginTemplActivated()
 
     try
     {
-        applyTemplate(rootBlock);
+        applyTemplate(&rootBlock);
     }
     catch (const BDException& ex)
     {
@@ -321,13 +310,16 @@ void MainWindow::findNext()
 
 void MainWindow::open()
 {
-    QString fileName = QFileDialog::getOpenFileName(this);
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open data file"), dataFolder);
     if (!fileName.isEmpty())
     {
+        QDir dir;
+        dataFolder = dir.absoluteFilePath(fileName);
+
         loadFile(fileName);
         setWindowTitle(tr("%1 - Binary Digger").arg(fileName));
 
-        freeTemplate(rootBlock);
+        freeTemplate(&rootBlock);
     }
     else
     {
@@ -339,14 +331,17 @@ bool MainWindow::save()
 {
     if (isUntitled)
         return saveAs();
-    return saveFile(curFile);
+    return saveFile(dataFile);
 }
 
 bool MainWindow::saveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), curFile);
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), dataFile);
     if (fileName.isEmpty())
         return false;
+
+    QDir dir;
+    dataFolder = dir.absoluteFilePath(fileName);
 
     return saveFile(fileName);
 }
@@ -399,12 +394,15 @@ void MainWindow::saveToReadableFile()
 
 void MainWindow::openScript()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open script"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open script"), scriptFolder);
     if (!fileName.isEmpty())
     {
+        QDir dir;
+        scriptFolder = dir.absoluteFilePath(fileName);
+
         loadScriptFile(fileName);
 
-//        freeTemplate(rootItem);
+//        freeTemplate(&rootItem);
     }
 }
 
@@ -420,6 +418,9 @@ bool MainWindow::saveScriptAs()
     QString fileName = QFileDialog::getSaveFileName(this, tr("Save script As"), curScriptFile);
     if (fileName.isEmpty())
         return false;
+
+    QDir dir;
+    scriptFolder = dir.absoluteFilePath(fileName);
 
     return saveScriptFile(fileName);
 }
@@ -511,7 +512,6 @@ void MainWindow::init()
 
     setCentralWidget(myCentralWidget);
 
-//    setAttribute(Qt::WA_DeleteOnClose);
     optionsDialog = new OptionsDialog(this);
     connect(optionsDialog, SIGNAL(accepted()), this, SLOT(optionsAccepted()));
     isUntitled = true;
@@ -519,12 +519,7 @@ void MainWindow::init()
     connect(hexEdit, SIGNAL(overwriteModeChanged(bool)), this, SLOT(setOverwriteMode(bool)));
     searchDialog = new SearchDialog(hexEdit, this);
 
-//    connect(treeView->selectionModel(),
-//            SIGNAL(selectionChanged(const QItemSelection &,
-//                                    const QItemSelection &)),
-//            this, SLOT(treeItemSelected()));
     connect(treeView, SIGNAL(expanded(QModelIndex)), this, SLOT(treeItemExpanded()));
-    connect(treeView, SIGNAL(clicked(QModelIndex)), this, SLOT(treeItemSelected()));
 
     connect(templWidget, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(pluginTemplActivated()));
 
@@ -536,6 +531,13 @@ void MainWindow::init()
     readSettings();
 
     setUnifiedTitleAndToolBarOnMac(true);
+}
+
+void MainWindow::initTreeViewChangeSelection()
+{
+    connect(treeView->selectionModel(),
+            SIGNAL(currentRowChanged(const QModelIndex &, const QModelIndex &)),
+            this, SLOT(treeItemSelected(const QModelIndex &, const QModelIndex &)));
 }
 
 void MainWindow::fillPluginsWidget()
@@ -713,6 +715,7 @@ void MainWindow::createStatusBar()
 void MainWindow::createToolBars()
 {
     fileToolBar = addToolBar(tr("File"));
+    fileToolBar->setObjectName(tr("FileToolBar"));
     fileToolBar->addAction(openAct);
     fileToolBar->addAction(saveAct);
     fileToolBar->addSeparator();
@@ -805,32 +808,34 @@ bool MainWindow::saveScriptFile(const QString &fileName)
 
 void MainWindow::readSettings()
 {
-    QSettings settings;
-    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
-    QSize size = settings.value("size", QSize(610, 460)).toSize();
-    move(pos);
-    resize(size);
+    QSettings settings("Haron", "BinaryDigger");
 
-    hexEdit->setAddressArea(settings.value("AddressArea").toBool());
-    hexEdit->setAsciiArea(settings.value("AsciiArea").toBool());
-    hexEdit->setHighlighting(settings.value("Highlighting").toBool());
-    hexEdit->setOverwriteMode(settings.value("OverwriteMode").toBool());
-    hexEdit->setReadOnly(settings.value("ReadOnly").toBool());
+    restoreGeometry(settings.value("geometry").toByteArray());
+    restoreState(settings.value("windowState").toByteArray());
 
-    hexEdit->setHighlightingColor(settings.value("HighlightingColor").value<QColor>());
-    hexEdit->setAddressAreaColor(settings.value("AddressAreaColor").value<QColor>());
-    hexEdit->setSelectionColor(settings.value("SelectionColor").value<QColor>());
-    hexEdit->setFont(settings.value("WidgetFont").value<QFont>());
+    dataFolder = settings.value("dataFolder").toString();
+    scriptFolder = settings.value("scriptFolder").toString();
 
-    hexEdit->setAddressWidth(settings.value("AddressAreaWidth").toInt());
+//    hexEdit->setAddressArea(settings.value("AddressArea").toBool());
+//    hexEdit->setAsciiArea(settings.value("AsciiArea").toBool());
+//    hexEdit->setHighlighting(settings.value("Highlighting").toBool());
+//    hexEdit->setOverwriteMode(settings.value("OverwriteMode").toBool());
+//    hexEdit->setReadOnly(settings.value("ReadOnly").toBool());
+
+//    hexEdit->setHighlightingColor(settings.value("HighlightingColor").value<QColor>());
+//    hexEdit->setAddressAreaColor(settings.value("AddressAreaColor").value<QColor>());
+//    hexEdit->setSelectionColor(settings.value("SelectionColor").value<QColor>());
+//    hexEdit->setFont(settings.value("WidgetFont").value<QFont>());
+
+//    hexEdit->setAddressWidth(settings.value("AddressAreaWidth").toInt());
 }
 
 void MainWindow::setCurrentFile(const QString &fileName)
 {
-    curFile = QFileInfo(fileName).canonicalFilePath();
+    dataFile = QFileInfo(fileName).canonicalFilePath();
     isUntitled = fileName.isEmpty();
     setWindowModified(false);
-    setWindowFilePath(curFile);
+    setWindowFilePath(dataFile);
 }
 
 void MainWindow::setCurrentScriptFile(const QString &fileName)
@@ -848,7 +853,9 @@ QString MainWindow::strippedName(const QString &fullFileName)
 
 void MainWindow::writeSettings()
 {
-    QSettings settings;
+    QSettings settings("Haron", "BinaryDigger");
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue("geometry",    saveGeometry());
+    settings.setValue("windowState", saveState());
 }

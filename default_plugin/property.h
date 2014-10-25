@@ -8,6 +8,14 @@
 #ifndef PROPERTY_H_
 #define PROPERTY_H_
 
+#include <types.h>
+#include <bd.h>
+
+#include <string>
+#include <map>
+#include <string.h>
+#include <boost/endian/conversion.hpp>
+
 typedef bd_result (*bd_to_string)(bd_block *block, char *buf, bd_u32 size);
 
 union bd_property_value

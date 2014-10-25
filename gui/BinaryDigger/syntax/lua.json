@@ -31,7 +31,8 @@
             "weight": "Bold",
             "fg":     "darkCyan",
 
-            "list": ["bd", "templ", "val", "char", "uchar", "word", "dword", "qword", "double"]
+            "list": ["bd", "templ", "val", "check_bit",
+                     "char", "uchar", "word", "dword", "qword", "double"]
         }
     },
 
