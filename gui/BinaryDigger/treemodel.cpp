@@ -217,7 +217,7 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
     child->setData(3, str.sprintf("%lXh", block->offset)); // Start
     child->setData(4, str.sprintf("%lXh", block->size));   // Size
 
-    if (block->is_array == BD_TRUE && index == (bd_u32)-1 && block->type != BD_CHAR)
+    if (block->is_array == BD_TRUE && index == (bd_u32)-1 && block->type != BD_CHAR && block->type != BD_STRING)
     {
         for (bd_u32 i = 0 ; i < block->count; ++i)
         {
@@ -228,7 +228,7 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
     {
         bd_u32 buf_size = 100;
 
-        if (block->is_array == BD_TRUE && block->type == BD_CHAR)
+        if (is_string(block))
         {
             buf_size = block->size + 1;
         }
@@ -246,74 +246,6 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
         str = buf;
 
         delete[] buf;
-
-//        bd_u64 offset = block->offset + (index == (bd_u32)-1 ? 0 : index * block->elem_size);
-//        switch (block->type)
-//        {
-//        case BD_CHAR:
-//        {
-//            char *data = new char[block->count + 1];
-//            if (!BD_SUCCEED(block_io->get_datap(block_io, block->offset, block->size, data)))
-//            {
-//                throw BDException(tr("Could not read single CHAR or CHAR array"));
-//            }
-//            data[block->count] = '\0';
-//            str = QString("\"%1\"").arg(data);
-//            break;
-//        }
-//        case BD_UCHAR:
-//            {
-//                unsigned char data;
-//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-//                {
-//                    throw BDException(tr("Could not read UCHAR"));
-//                }
-//                str = QString("%1").arg(data);
-//            }
-//            break;
-//        case BD_WORD:
-//            {
-//                WORD_T data;
-//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-//                {
-//                    throw BDException(tr("Could not read WORD"));
-//                }
-//                str = QString("%1").arg(data);
-//            }
-//            break;
-//        case BD_DWORD:
-//            {
-//                DWORD_T data;
-//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-//                {
-//                    throw BDException(tr("Could not read DWORD"));
-//                }
-//                str = QString("%1").arg(data);
-//            }
-//            break;
-//        case BD_QWORD:
-//            {
-//                QWORD_T data;
-//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-//                {
-//                    throw BDException(tr("Could not read QWORD"));
-//                }
-//                str = QString("%1").arg(data);
-//            }
-//            break;
-//        case BD_DOUBLE:
-//            {
-//                DOUBLE_T data;
-//                if (!BD_SUCCEED(block_io->get_datap(block_io, offset, block->elem_size, &data)))
-//                {
-//                    throw BDException(tr("Could not read DOUBLE"));
-//                }
-//                str = QString("%1").arg(data);
-//            }
-//            break;
-//        default:
-//            break;
-//        }
     }
 
     child->setData(1, str); // Value

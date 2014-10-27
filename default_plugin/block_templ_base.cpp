@@ -17,7 +17,7 @@ BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstr
     parent           = _parent;
     templ_properties = props;
 
-    children.child = 0;
+    children.child = nullptr;
     children.count = 0;
 
     is_array = _count > 0;
@@ -25,7 +25,7 @@ BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstr
 
     offset = getPosition();
 
-    if (is_array && _type == BD_TEMPL)
+    if (is_array && (_type == BD_TEMPL || _type == BD_STRING))
     {
         // TODO: probably this array should be marked somehow in parent array of children
 
@@ -52,10 +52,29 @@ BlockTemplBase::BlockTemplBase(bd_block_io *_block_io, bd_cstring _name, bd_cstr
         elem_size = 0;
         size = pos - offset;
     }
-    else // not an array or array of simple type
+    else // not an array or array of simple type or string
     {
-        elem_size = _size;
-        size = _size * count;
+        if (_type == BD_STRING)
+        {
+            elem_size = 1;
+
+            // search for trailing 0
+            auto pos = offset;
+            auto ch = char{1};
+            do
+            {
+                get_data(pos, 1, &ch);
+                pos++;
+            }
+            while (ch != 0); // TODO: check EOF == BD_EOB - end of block
+
+            size = pos - offset;
+        }
+        else
+        {
+            elem_size = _size;
+            size = _size * count;
+        }
 
         if (_type != BD_TEMPL)
             shiftPosition(getSize());
@@ -110,14 +129,14 @@ BlockTemplBase *BlockTemplBase::get(const char* block_name, bd_u32 index) const
 
 std::string BlockTemplBase::getString() const
 {
-    bd_require_true(type == BD_CHAR && is_array == BD_TRUE, "Template is not a string");
+    bd_require_true(is_string(this), "Template is not a string");
 
     auto len = getSize();
     auto str = new bd_char[len + 1];
     getData((void *)str);
     str[len] = '\0';
 
-    auto result = std::string(str, len);
+    auto result = std::string(str);
     delete[] str;
 
     return result;
@@ -130,6 +149,10 @@ std::string BlockTemplBase::to_string()
         if (type == BD_CHAR)
             return getString();
         return "<array>";
+    }
+    else if (type == BD_STRING)
+    {
+        return getString();
     }
 
     switch (getType())

@@ -39,6 +39,8 @@ typedef struct bd_block
     } children;
 } bd_block;
 
+#define is_string(block) (block != BD_NULL && ((block->type == BD_CHAR && block->is_array == BD_TRUE) || block->type == BD_STRING))
+
 typedef struct bd_message
 {
     bd_result  code;  // message result code

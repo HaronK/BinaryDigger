@@ -296,11 +296,11 @@ protected:
         }
 
         output << indent << block->type_name << "(" << block->type << ") " << block->name;
-        if (block->is_array == BD_TRUE)
+        if (block->is_array == BD_TRUE || block->type == BD_STRING)
         {
             output << "[" << block->count << "] (" << block->elem_size << "/" << block->size << ")";
 
-            if (block->type == BD_CHAR)
+            if (is_string(block))
             {
                 bd_u32 val_size = block->size + 1;
                 bd_string val = new bd_char[val_size];

@@ -35,6 +35,7 @@ typedef bd_wchar*        bd_wstring;
 typedef const bd_wstring bd_cwstring;
 
 typedef void*     bd_pointer;
+#define BD_NULL 0
 
 typedef bd_i32 bd_result; /// 0 - success, < 0 - errors defined by plugin, > 0 - other system specific info
 
@@ -57,6 +58,7 @@ enum bd_base_result_code
 typedef enum /*bd_block_type*/
 {
     BD_TEMPL = 0, // user defined template
+    BD_STRING,
 
     // simple types
 #define BD_BLOCK_TYPE_DECL(name, type) BD_##name,
@@ -67,6 +69,8 @@ typedef enum /*bd_block_type*/
 } bd_block_type;
 
 // Template types
+typedef char* STRING_T;
+
 #define BD_BLOCK_TYPE_DECL(name, type) typedef type name##_T;
     BD_BLOCK_TYPES
 #undef BD_BLOCK_TYPE_DECL

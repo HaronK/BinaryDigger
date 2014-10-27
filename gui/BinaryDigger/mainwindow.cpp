@@ -221,7 +221,6 @@ void MainWindow::freeTemplate(bd_block **block)
     }
 
     treeView->setModel(0);
-    pluginIndex = -1;
     templIndex = 0;
     *block = NULL;
 }

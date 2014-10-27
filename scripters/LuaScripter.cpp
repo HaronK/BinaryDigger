@@ -530,6 +530,7 @@ luabind::object get_templ_value(lua_State *L, BlockTemplBase *templ)
 {
     switch (templ->getType())
     {
+//    case BD_STRING:
 #define BD_BLOCK_TYPE_DECL(name, tp)                                        \
     case BD_##name: {                                                       \
         auto val = (tp) *templ;                                             \
@@ -603,7 +604,7 @@ luabind::object get_value(const luabind::object& data)
         }
     }
 
-    if (templ->getType() == BD_CHAR && templ->isArray())
+    if (is_string(templ))
     {
         auto val = templ->getString();
         DEBUG_OUTPUT("Value " << templ->getName() << " = " << val << "\n");
@@ -724,7 +725,8 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
             register_simple_templ<WORD>  ("word"),
             register_simple_templ<DWORD> ("dword"),
             register_simple_templ<QWORD> ("qword"),
-            register_simple_templ<DOUBLE>("double")
+            register_simple_templ<DOUBLE>("double"),
+            register_simple_templ<STRING>("string")
         ];
 
         // TODO: specify properties
