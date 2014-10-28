@@ -44,7 +44,7 @@ class STRING : public BlockTempl<STRING_T, BD_STRING>
 {
 public:
     STRING(bd_block_io* _block_io, bd_cstring _var_name, bd_u32 _count, BlockTemplBase* _parent,
-           const bd_property_records &props) : BlockTempl(_block_io, _var_name, "string", _count, _parent, props)
+           const bd_property_records &props) : BlockTempl(_block_io, _var_name, (bd_cstring) "string", _count, _parent, props)
     {}
 };
 
