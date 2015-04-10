@@ -9,89 +9,64 @@
 #define PROPERTY_H_
 
 #include <types.h>
+#include <demangle.h>
 #include <bd.h>
+#include <exception.h>
 
 #include <string>
 #include <map>
 #include <string.h>
 #include <boost/endian/conversion.hpp>
+#include <boost/any.hpp>
+#include <boost/format.hpp>
 
-typedef bd_result (*bd_to_string)(bd_block *block, char *buf, bd_u32 size);
-
-union bd_property_value
-{
-    bd_i32       i;
-    bd_f64       d;
-    bd_string    s;
-    bd_to_string to_s;
-};
+typedef std::string (*bd_to_string)(bd_block *block);
 
 struct bd_property
 {
-    bd_property_type  type;
-    bd_property_value value;
+    boost::any value;
 
-    bd_property() : type(BD_PROP_UNDEF)
+    bd_property()
     {
-        value.i = 0;
-        memset(&value, 0, sizeof(value));
     }
 
-    bd_property(const bd_property &other) : type(BD_PROP_UNDEF)
+    bd_property(const bd_property &other) : value(other.value)
     {
-        switch (other.type)
+    }
+
+    template<class T>
+    bd_property(const T &val) : value(val)
+    {
+    }
+
+    bool is_empty()
+    {
+        return value.empty();
+    }
+
+    const std::type_info &type() const
+    {
+        return value.type();
+    }
+
+    template<class T>
+    bool is_type() const
+    {
+        return value.type() == typeid(T);
+    }
+
+    template<class T>
+    T get()
+    {
+        try
         {
-        case BD_PROP_INTEGER:
-            *this = bd_property(other.value.i);
-            break;
-        case BD_PROP_DOUBLE:
-            *this = bd_property(other.value.d);
-            break;
-        case BD_PROP_STRING:
-            *this = bd_property(other.value.s);
-            break;
-        case BD_PROP_TO_STRING:
-            *this = bd_property(other.value.to_s);
-            break;
-        default:
-            *this = bd_property();
-            break;
+            return boost::any_cast<T>(value);
         }
-    }
-
-    bd_property(bd_i32 val) : type(BD_PROP_INTEGER)
-    {
-        value.i = val;
-    }
-
-    bd_property(bd_f64 val) : type(BD_PROP_DOUBLE)
-    {
-        value.d = val;
-    }
-
-    bd_property(const bd_string val) : type(BD_PROP_STRING)
-    {
-        if (val != nullptr)
+        catch (const boost::bad_any_cast &ex)
         {
-            value.s = new bd_char[strlen(val) + 1];
-            strncpy(value.s, val, strlen(val));
-            value.s[strlen(val)] = 0;
+            throw BlockTemplException((boost::format("Wrong cast. Expected: %1%. Actual: %2%.")
+                                       % get_type_name<T>() % get_type_name(type())).str());
         }
-        else
-        {
-            value.s = nullptr;
-        }
-    }
-
-    bd_property(bd_to_string val) : type(BD_PROP_TO_STRING)
-    {
-        value.to_s = val;
-    }
-
-    ~bd_property()
-    {
-        if (type == BD_PROP_STRING && value.s != nullptr)
-            delete[] value.s;
     }
 };
 

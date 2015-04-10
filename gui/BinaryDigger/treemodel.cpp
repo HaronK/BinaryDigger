@@ -198,15 +198,16 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
     int parentChildrenCount = parent->childCount();
     parent->insertChildren(parentChildrenCount, 1, rootItem->columnCount());
 
+    bool is_array_elem = block->parent != NULL && block->parent->is_array == BD_TRUE;
     TreeItem<UserData> *child = parent->child(parentChildrenCount);
     UserData userData;
-    userData.index = index;
+    userData.index = is_array_elem ? index : (bd_u32)-1;
     userData.block = block;
     child->setUserData(userData);
 
     if (block->is_array)
     {
-        str.sprintf("%s[%d]", block->name, index == (bd_u32)-1 ? block->count : index);
+        str.sprintf("%s[%d]", block->name, block->count);
     }
     else
     {
@@ -217,41 +218,32 @@ void TreeModel::generateModelData(const bd_block *block, bd_u32 index, TreeItem<
     child->setData(3, str.sprintf("%lXh", block->offset)); // Start
     child->setData(4, str.sprintf("%lXh", block->size));   // Size
 
-    if (block->is_array == BD_TRUE && index == (bd_u32)-1 && block->type != BD_CHAR && block->type != BD_STRING)
+    bd_u32 buf_size = 100;
+    if (is_string(block))
     {
-        for (bd_u32 i = 0 ; i < block->count; ++i)
-        {
-            generateModelData(block, i, child);
-        }
+        buf_size = block->size + 1;
     }
-    else // char array or array element
+
+    bd_string buf = new bd_char[buf_size];
+
+    bd_result res = plugin->get_string_value((bd_block *) block, buf, buf_size);
+    if (!(res == BD_SUCCESS))
     {
-        bd_u32 buf_size = 100;
+        char buf[1024];
+        plugin->result_message(res, (bd_string) buf, sizeof(buf));
 
-        if (is_string(block))
-        {
-            buf_size = block->size + 1;
-        }
-
-        bd_string buf = new bd_char[buf_size];
-
-        bd_result res = plugin->get_string_value((bd_block *) block, buf, buf_size);
-        if (!(res == BD_SUCCESS))
-        {
-            char buf[1024];
-            plugin->result_message(res, (bd_string) buf, sizeof(buf));
-            throw BDException(tr("%1\n%2").arg(tr("Cannot get string representation of block value")).arg(buf));
-        }
-
-        str = buf;
-
-        delete[] buf;
+        // TODO: substitute exception with message box
+        throw BDException(tr("%1\n%2").arg(tr("Cannot get string representation of block value")).arg(buf));
     }
+
+    str = buf;
+
+    delete[] buf;
 
     child->setData(1, str); // Value
 
     for (bd_u32 i = 0; i < block->children.count; ++i)
     {
-        generateModelData(block->children.child[i], (bd_u32)-1, child);
+        generateModelData(block->children.child[i], i, child);
     }
 }

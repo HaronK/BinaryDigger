@@ -27,6 +27,8 @@ using namespace std;
 #define DEBUG_OUTPUT(msg) cout << msg
 //#define DEBUG_OUTPUT(msg)
 
+auto bd_L = (lua_State *) nullptr;
+
 class LuaTempl: public BlockTempl<LuaTempl>
 {
 public:
@@ -146,49 +148,92 @@ auto lua_type_name = map<int, const char*>{
 //    {LUA_NUMTAGS,        "NUMTAGS"},
 };
 
-bool check_lua_type(const luabind::object &param, int type, string &err)
+template<class T, int luatp>
+bool check_and_set(const luabind::object &param, const bd_property &def, bd_property &result)
 {
-    if (luabind::type(param) != type)
-    {
-        err = (boost::format("Property has wrong type. Expected: %1% but was %2%") %
-                             type % lua_type_name[luabind::type(param)]).str();
+    if (!def.is_type<T>())
         return false;
+
+    if (luabind::type(param) != luatp)
+    {
+        auto msg = (boost::format("Property has wrong type. Expected: %1% -> %2%(%3%) but was %4%(%5%)") %
+                def.type().name() % lua_type_name[luatp] % luatp % lua_type_name[luabind::type(param)] % luabind::type(param)).str();
+        throw BlockTemplException(msg);
     }
+
+    result = luabind::object_cast<T>(param);
+
     return true;
 }
 
-bool parse_property(const luabind::object &param, bd_property &result, string &err)
+template<class T>
+bool check_num_and_set(const luabind::object &param, const bd_property &def, bd_property &result)
 {
-    switch (result.type)
+    return check_and_set<T, LUA_TNUMBER>(param, def, result);
+}
+
+bool parse_property(const luabind::object &param, const bd_property &def, bd_property &result, string &err)
+{
+    try
     {
-    case BD_PROP_INTEGER:
-        if (!check_lua_type(param, LUA_TNUMBER, err))
-            return false;
-        result.value.i = luabind::object_cast<bd_i32>(param);
-        return true;
-    case BD_PROP_DOUBLE:
-        if (!check_lua_type(param, LUA_TNUMBER, err))
-            return false;
-        result.value.d = luabind::object_cast<bd_f64>(param);
-        break;
-    case BD_PROP_STRING:
+        if (check_num_and_set<bd_i32>(param, def, result))
+            return true;
+        if (check_num_and_set<bd_u32>(param, def, result))
+            return true;
+        if (check_num_and_set<bd_i64>(param, def, result))
+            return true;
+        if (check_num_and_set<bd_u64>(param, def, result))
+            return true;
+        if (check_num_and_set<bd_f64>(param, def, result))
+            return true;
+
+        if (check_and_set<string, LUA_TSTRING>(param, def, result))
+            return true;
+
+//        if (check_and_set<bd_to_string, LUA_TFUNCTION>(param, def, result))
+//            return true;
+    }
+    catch (const BlockTemplException &ex)
     {
-        if (!check_lua_type(param, LUA_TSTRING, err))
-            return false;
-        auto val = luabind::object_cast<string>(param);
-        result = bd_property((bd_string) val.c_str());
-        break;
+        err = ex.what();
     }
-    case BD_PROP_TO_STRING:
-        if (!check_lua_type(param, LUA_TFUNCTION, err))
-            return false;
-        // TODO: implement
-        break;
-    default:
-        err = (boost::format("Unsupported type: %1%") % result.type).str();
-        return false;
+
+    return false;
+}
+
+string lua_to_string(bd_block *block)
+{
+    auto templ = (BlockTemplBase *) block;
+
+    // try object tostring function
+    auto templ_tostring_name = string(templ->getParent()->getTypeName()) + "_" + templ->getName() + "_tostring";
+    auto templ_tostring = luabind::object_cast<luabind::object>(luabind::globals(bd_L)[templ_tostring_name]);
+
+    if (!templ_tostring.is_valid()) // try template tostring function
+    {
+        templ_tostring_name = string(templ->getTypeName()) + "__tostring";
+        templ_tostring = luabind::object_cast<luabind::object>(luabind::globals(bd_L)[templ_tostring_name]);
     }
-    return true;
+
+    if (templ_tostring.is_valid())
+    {
+        if (LUA_TSTRING == luabind::type(templ_tostring))
+        {
+            return luabind::object_cast<string>(templ_tostring);
+        }
+        if (LUA_TFUNCTION == luabind::type(templ_tostring))
+        {
+            return luabind::call_function<string>(templ_tostring, templ);
+        }
+
+        // TODO: warning -> unsupported tostring type
+    }
+    else // this should not happened
+    {
+        // TODO: warning -> unknown tostring function
+    }
+
+    return "";
 }
 
 /**
@@ -199,7 +244,7 @@ bool parse_property(const luabind::object &param, bd_property &result, string &e
  * @param iter        Points to the first property.
  * @param props [OUT] Properties
  */
-void parse_properties(luabind::iterator &iter, bd_property_records &props)
+void parse_properties(const string &templ_name, const string &var_name, luabind::iterator &iter, bd_property_records &props)
 {
     auto end = luabind::iterator();
     for (; iter != end; ++iter)
@@ -222,12 +267,30 @@ void parse_properties(luabind::iterator &iter, bd_property_records &props)
 
         // get property
         auto prop = bd_property();
-        prop.type = default_property[name].type;
-        string err;
-        if (!parse_property(*iter, prop, err))
+
+        if (name == "tostring")
         {
-            // TODO: add warning with err message
-            continue;
+            if (LUA_TSTRING == luabind::type(*iter) || LUA_TFUNCTION == luabind::type(*iter))
+            {
+                auto templ_tostring = templ_name + "_" + var_name + "_tostring";
+                luabind::globals(bd_L)[templ_tostring] = *iter;
+
+                prop = lua_to_string;
+            }
+            else
+            {
+                // TODO: add warning with err message
+                continue;
+            }
+        }
+        else
+        {
+            string err;
+            if (!parse_property(*iter, default_property[name], prop, err))
+            {
+                // TODO: add warning with err message
+                continue;
+            }
         }
 
         props[name] = prop;
@@ -259,10 +322,10 @@ void parse_properties(luabind::iterator &iter, bd_property_records &props)
  * @param params   [OUT] Template parameters if set
  * @param props    [OUT] Template properties if set
  */
-void parse_apply_templ_params(const luabind::object &data, string &var_name, int &arr_size, luabind::object &params,
+void parse_apply_templ_params(const string &templ_name, const luabind::object &data, string &var_name, int &arr_size, luabind::object &params,
         bd_property_records &props)
 {
-    bd_require_lua_type(LUA_TTABLE,  data);
+    bd_require_lua_type(LUA_TTABLE, data);
 
     auto iter = luabind::iterator(data);
     auto end = luabind::iterator();
@@ -288,7 +351,7 @@ void parse_apply_templ_params(const luabind::object &data, string &var_name, int
     }
 
     // object properties
-    parse_properties(iter, props);
+    parse_properties(templ_name, var_name, iter, props);
 
     DEBUG_OUTPUT("Data: " << tostring(data) << "\n");
 }
@@ -437,13 +500,13 @@ BlockTemplBase *apply_templ(const luabind::object& data)
     auto params = luabind::object();
     auto props = bd_property_records();
 
-    parse_apply_templ_params(data, var_name, arr_size, params, props);
-
     auto L = data.interpreter();
 
     // 1. get current function name = template name
     auto templ_name = string();
     getLuaCurrentFunctionName(L, templ_name);
+
+    parse_apply_templ_params(templ_name, data, var_name, arr_size, params, props);
 
     DEBUG_OUTPUT("Apply templ " << templ_name << "::" << var_name << " ...\n");
 
@@ -461,9 +524,9 @@ BlockTemplBase *apply_templ(const luabind::object& data)
 
     registerTemplVariable(L, templ, var_name);
 
-    auto templ_func = templ_name + "_func";
+    auto templ_apply = templ_name + "_apply";
 
-    apply_templ_func(L, templ, templ_func, params);
+    apply_templ_func(L, templ, templ_apply, params);
 
     DEBUG_OUTPUT("  applied " << templ_name << "::" << var_name << "\n");
 
@@ -496,7 +559,7 @@ void register_templ(const luabind::object& data)
 
     // template properties (optional)
     auto props = new bd_property_records;
-    parse_properties(iter, *props);
+    parse_properties(templ_name, "", iter, *props);
 
     auto L = func.interpreter();
 
@@ -509,8 +572,8 @@ void register_templ(const luabind::object& data)
     ];
 
     // register template 'apply' function
-    auto templ_func = templ_name + "_func";
-    luabind::globals(L)[templ_func] = func;
+    auto templ_apply = templ_name + "_apply";
+    luabind::globals(L)[templ_apply] = func;
 
     // register template properties
     auto templ_props = templ_name + "_props";
@@ -628,14 +691,14 @@ BlockTemplBase *apply_simple_templ(const luabind::object& data)
     auto params = luabind::object();
     auto props = bd_property_records();
 
-    parse_apply_templ_params(data, var_name, arr_size, params, props);
-
-    DEBUG_OUTPUT("Apply simple templ " << get_type_name<T>() << "." << var_name << " ...");
-
     auto L = data.interpreter();
 
     auto cur_templ = getCurrentTempl(L);
     bd_require_not_null(cur_templ, "Current template is null");
+
+    parse_apply_templ_params(cur_templ->getName(), data, var_name, arr_size, params, props);
+
+    DEBUG_OUTPUT("Apply simple templ " << get_type_name<T>() << "." << var_name << " ...");
 
     auto templ = new T(cur_templ->getBlockIo(), (bd_cstring) var_name.c_str(), arr_size, cur_templ, bd_property_records());
 
@@ -694,16 +757,16 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
     try
     {
         // Create a new lua state
-        auto L = luaL_newstate();
+        bd_L = luaL_newstate();
 
         // Connect LuaBind to this lua state
-        luabind::open(L);
+        luabind::open(bd_L);
 
-        luaopen_base(L);
-        luaopen_package(L);
+        luaopen_base(bd_L);
+        luaopen_package(bd_L);
 
         // scripter default functions
-        luabind::module(L)
+        luabind::module(bd_L)
         [
             luabind::class_<bd_block_io>("TemplBlob"),
             luabind::class_<bd_property_records>("Properties"),
@@ -734,23 +797,23 @@ bd_result TemplWrapper<LuaTempl>::applyTemplate(bd_block_io* block_io, bd_cstrin
 
         *result = templ;
 
-        setRootTempl(L, templ);
-        setCurrentTempl(L, templ);
+        setRootTempl(bd_L, templ);
+        setCurrentTempl(bd_L, templ);
 
 //        DEBUG_OUTPUT("Globals: " << tostring(luabind::globals(L)) << "\n");
 
         /**/
-        auto err_code = luaL_dofile(L, script);
+        auto err_code = luaL_dofile(bd_L, script);
 
         if (err_code)
         {
-            auto err_msg = string(lua_tostring(L, -1));
+            auto err_msg = string(lua_tostring(bd_L, -1));
 
             result_code = -1;
             err = "Cannot load or run Lua file: " + string(script) + "\nLua error: " + err_msg;
         }
 
-        lua_close(L);
+        lua_close(bd_L);
     }
     catch (const luabind::error &ex)
     {

@@ -38,6 +38,11 @@ public:
         return type;
     }
 
+    bd_cstring getTypeName()
+    {
+        return type_name;
+    }
+
     bool isArray() const
     {
         return is_array == BD_TRUE;
@@ -53,6 +58,11 @@ public:
         bd_u64 result;
         bd_result_throw(block_io->get_pos(block_io, &result), "Cannot get position");
         return result;
+    }
+
+    BlockTemplBase *getParent()
+    {
+        return (BlockTemplBase *) parent;
     }
 
     void setPosition(bd_u64 pos)
@@ -91,7 +101,7 @@ public:
             bd_require_true_f(type == BD_##name,                                        \
                     "Cannot cast value of template object of type %d to " #name, type); \
             tp val; get_data(offset, sizeof(tp), &val);                                 \
-            return correct_endian(val, (bd_endian) get_property("endian").value.i); }
+            return correct_endian(val, (bd_endian) get_property("endian").get<int>()); }
     BD_BLOCK_TYPES
 #undef BD_BLOCK_TYPE_DECL
 

@@ -144,6 +144,12 @@ std::string BlockTemplBase::getString() const
 
 std::string BlockTemplBase::to_string()
 {
+    auto to_s = get_property("tostring").get<bd_to_string>();
+    if (to_s != nullptr)
+    {
+        return (*to_s)(this);
+    }
+
     if (is_array == BD_TRUE)
     {
         if (type == BD_CHAR)

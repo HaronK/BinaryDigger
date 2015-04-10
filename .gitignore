@@ -9,3 +9,4 @@ server
 .metadata
 .settings
 doc
+test_data/*

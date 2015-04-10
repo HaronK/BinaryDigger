@@ -18,7 +18,10 @@
 #include "../utils/default_block_io.h"
 
 #include <iostream>
+#include <boost/program_options.hpp>
 #include <boost/scope_exit.hpp>
+
+namespace po = boost::program_options;
 
 using Poco::Util::Application;
 using Poco::Util::Option;
@@ -50,6 +53,122 @@ using Poco::AutoPtr;
         _errorMessage = Poco::format("Error:\n  %s\n  %s", err_msg, std::string(buf)); \
         return res; \
     } }
+
+/*
+static bool parse_options(int argc, char **argv, bool& toOpaque, std::string& value)
+{
+    // Declare the supported options.
+    po::options_description generic_options("USAGE: dumptree [OPTIONS] file1 [file2]\nAllowed options");
+    generic_options.add_options()
+        ("help,h", "Show this help message.")
+        ("to,t",   "Convert formula value to opaque.")
+    ;
+
+    po::options_description visible_options;
+    visible_options.add(generic_options);
+
+    po::options_description hidden_options("Hidden options");
+    hidden_options.add_options()
+        ("value", po::value<std::string>(), "Opaque that should be converted to normal value or formula which "
+                                            "result should be converted to opaque.")
+    ;
+
+    po::options_description cmdline_options;
+    cmdline_options.add(visible_options).add(hidden_options);
+
+    po::positional_options_description positional_options;
+    positional_options.add("value", 1);
+
+    po::parsed_options parsed = po::command_line_parser(argc, argv)
+                            .options(cmdline_options)
+                            .positional(positional_options)
+                            .run();
+
+    po::variables_map vm;
+    po::store(parsed, vm);
+    po::notify(vm);
+
+    if (vm.count("help"))
+    {
+        std::cout << visible_options << "\n";
+        return true;
+    }
+
+    toOpaque = vm.count("to") > 0;
+
+    if (vm.count("value"))
+    {
+        value = x_strdup(vm["value"].as<std::string>().c_str());
+    }
+    else
+    {
+        std::cerr << "ERROR: Value is a mandatory parameter.\n";
+        std::cout << visible_options << "\n";
+
+        return false;
+    }
+
+    return true;
+}
+
+int main(int argc, char *argv[])
+{
+    bool toOpaque = false;
+    std::string value;
+
+    if (!parse_options(argc, argv, toOpaque, value))
+    {
+        std::cerr << "Cannot parse options.";
+        return -1;
+    }
+
+    CMPR_INFO cmprInfo;
+    if (rpc_init_compress(&cmprInfo, 1) == -1)
+    {
+        std::cerr << "Cannot init compress info.";
+        return -1;
+    }
+
+    ac_field fld;
+    memset(&fld, 0, sizeof(fld));
+
+    if (toOpaque)
+    {
+        evaluate_formula(fld, value, 0);
+
+        std::cout << "Result: " << ac_field2string(fld) << "\n";
+
+        ac::server::OpaqueUtils(&cmprInfo).convert2_ac_opaque(&fld);
+
+        std::cout << "Opaque: " << ac_field2string(fld) << "\n";
+    }
+    else
+    {
+        int len = value.size() / 2, len1 = 0;
+        char *bin = new char[len];
+        BOOST_SCOPE_EXIT(&bin)
+        {
+            delete[] bin;
+        }
+        BOOST_SCOPE_EXIT_END
+
+        str2bin(value.c_str(), &bin, &len1);
+        if (len != len1)
+        {
+            std::cerr << "Conversion string to binary is wrong. Expected length is " << len << " but was " << len1 << ".\n";
+            return -1;
+        }
+
+        set_opaque_ac_field(&fld, bin, len, FLD_NORMAL, TRUE);
+
+        ac::server::OpaqueUtils(&cmprInfo).convert_ac_opaque(&fld);
+
+        std::cout << "Value: " << ac_field2string(fld) << "\n";
+    }
+
+    return 0;
+}
+*/
 
 class DumpTreeApp: public Application
 {
@@ -295,15 +414,15 @@ protected:
             return BD_SUCCESS;
         }
 
-        output << indent << block->type_name << "(" << block->type << ") " << block->name;
+        output << indent << block->name << " " << block->type_name << ":" << block->type << " ";
         if (block->is_array == BD_TRUE || block->type == BD_STRING)
         {
             output << "[" << block->count << "] (" << block->elem_size << "/" << block->size << ")";
 
             if (is_string(block))
             {
-                bd_u32 val_size = block->size + 1;
-                bd_string val = new bd_char[val_size];
+                auto val_size = block->size + 1;
+                auto val = new bd_char[val_size];
                 BOOST_SCOPE_EXIT(&val)
                 {
                     delete[] val;

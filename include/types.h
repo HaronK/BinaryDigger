@@ -93,10 +93,13 @@ typedef char* STRING_T;
 typedef enum /*bd_property_type*/
 {
     BD_PROP_UNDEF,     // undefined
+    BD_PROP_BYTE,      // bd_i8
+    BD_PROP_SHORT,     // bd_i16
     BD_PROP_INTEGER,   // bd_i32
+    BD_PROP_LONG,      // bd_i64
     BD_PROP_DOUBLE,    // bd_f64
     BD_PROP_STRING,    // bd_string
-    BD_PROP_TO_STRING, // bd_result (*func)(bd_block *block, char *buf, bd_u32 size);
+    BD_PROP_TO_STRING, // std::string (*bd_to_string)(bd_block *block)
 } bd_property_type;
 
 #endif // BD_TYPES_H_
