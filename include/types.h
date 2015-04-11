@@ -75,20 +75,22 @@ typedef char* STRING_T;
     BD_BLOCK_TYPES
 #undef BD_BLOCK_TYPE_DECL
 
-//const char *get_block_type_name(bd_block_type type)
-//{
-//    switch (type)
-//    {
-//    case BD_TEMPL:
-//        return "TEMPL";
-//#define BD_BLOCK_TYPE_DECL(name, tp) \
-//    case BD_##name: {                \
-//        return #name; }
-//    BD_BLOCK_TYPES
-//#undef BD_BLOCK_TYPE_DECL
-//    }
-//    return "<UNDEF>";
-//}
+/*
+const char *get_block_type_name(bd_block_type type)
+{
+    switch (type)
+    {
+    case BD_TEMPL:
+        return "TEMPL";
+#define BD_BLOCK_TYPE_DECL(name, tp) \
+    case BD_##name: {                \
+        return #name; }
+    BD_BLOCK_TYPES
+#undef BD_BLOCK_TYPE_DECL
+    }
+    return "<UNDEF>";
+}
+*/
 
 typedef enum /*bd_property_type*/
 {

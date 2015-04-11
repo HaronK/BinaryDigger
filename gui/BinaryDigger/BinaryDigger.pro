@@ -6,8 +6,11 @@ FORMS       = \
     searchdialog.ui \
     optionsdialog.ui
 
+#HEXEDIT = QHexEdit_Dax89
+HEXEDIT = qhexedit
+
 #HEXEDIT_HDR = qhexedit2/*.h
-HEXEDIT_HDR = ../../external/QHexEdit_Dax89/*.h
+HEXEDIT_HDR = ../../external/$$HEXEDIT/*.h
 
 HEADERS     = \
     $$HEXEDIT_HDR \
@@ -24,7 +27,7 @@ HEADERS     = \
     hexedit/*.h
 
 #HEXEDIT_SRC = qhexedit2/*.cpp
-HEXEDIT_SRC = ../../external/QHexEdit_Dax89/*.cpp
+HEXEDIT_SRC = ../../external/$$HEXEDIT/*.cpp
 
 SOURCES     = \
     $$HEXEDIT_SRC \
@@ -40,7 +43,7 @@ SOURCES     = \
 
 RESOURCES   = BinaryDigger.qrc
 
-INCLUDEPATH += $$PWD/../../external
+INCLUDEPATH += $$PWD/../../external/$$HEXEDIT
 
 OTHER_FILES += \
     qhexedit2/license.txt \

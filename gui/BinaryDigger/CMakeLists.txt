@@ -13,8 +13,11 @@ qt5_add_resources(UI_RESOURCES
 
 #file(GLOB QT_HEXEDIT_SRC "qhexedit2/*.cpp")
 
-include_directories("../../external")
-file(GLOB QT_HEXEDIT_SRC "../../external/QHexEdit_Dax89/*.cpp")
+#set(HEXEDIT QHexEdit_Dax89)
+set(HEXEDIT qhexedit)
+
+include_directories("../../external/${HEXEDIT}")
+file(GLOB QT_HEXEDIT_SRC "../../external/${HEXEDIT}/*.cpp")
 
 set(QT_BD_SRC
     ${QT_HEXEDIT_SRC}
