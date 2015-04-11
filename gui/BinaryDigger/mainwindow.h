@@ -18,7 +18,7 @@
 #include <QListWidget>
 #include <QTextEdit>
 
-#include <qhexedit2/qhexedit.h>
+#include <hexedit/hexedit.h>
 
 #include <scripteditor.h>
 #include <syntaxhighlighter.h>
@@ -162,7 +162,7 @@ private:
     QListWidget *templWidget;
     ScriptEditor *scriptEditor;
     SyntaxHighlighter *highlighter;
-    QHexEdit *hexEdit;
+    HexEdit *hexEdit;
 
     OptionsDialog *optionsDialog;
     SearchDialog *searchDialog;

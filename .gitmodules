@@ -13,6 +13,3 @@
 [submodule "external/QHexEdit_Dax89"]
 	path = external/QHexEdit_Dax89
 	url = https://github.com/Dax89/QHexEdit
-[submodule "external/qhexedit_qingfengxia"]
-	path = external/qhexedit_qingfengxia
-	url = https://github.com/qingfengxia/qhexedit

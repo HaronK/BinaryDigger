@@ -11,14 +11,21 @@ qt5_add_resources(UI_RESOURCES
     BinaryDigger.qrc
 )
 
+#set(QT_HEXEDIT_SRC
+#    qhexedit2/qhexedit.cpp
+#    qhexedit2/qhexedit_p.cpp
+#    qhexedit2/commands.cpp
+#    qhexedit2/xbytearray.cpp
+#)
+
+include_directories("../../external")
+file(GLOB QT_HEXEDIT_SRC "../../external/QHexEdit_Dax89/*.cpp")
+
 set(QT_BD_SRC
+    ${QT_HEXEDIT_SRC}
     mainwindow.cpp
     treemodel.cpp
     treeitem.cpp
-    qhexedit2/qhexedit.cpp
-    qhexedit2/qhexedit_p.cpp
-    qhexedit2/commands.cpp
-    qhexedit2/xbytearray.cpp
     main.cpp
     FileTemplBlob.cpp
     searchdialog.cpp

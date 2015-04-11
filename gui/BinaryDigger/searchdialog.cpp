@@ -4,7 +4,7 @@
 #include <QMessageBox>
 #include <QString>
 
-SearchDialog::SearchDialog(QHexEdit *hexEdit, QWidget *parent) :
+SearchDialog::SearchDialog(HexEdit *hexEdit, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SearchDialog)
 {

@@ -248,7 +248,7 @@ void MainWindow::treeItemSelected(const QModelIndex &selected, const QModelIndex
     {
         bd_u64 begin = curItem.block->offset + (curItem.index == (bd_u32)-1 ? 0 : curItem.index * curItem.block->elem_size);
         bd_u64 size = curItem.index == (bd_u32)-1 ? curItem.block->size : curItem.block->elem_size;
-        hexEdit->setSelectionRange(begin, begin + size);
+        hexEdit->setSelectionLength((qint64) begin, (qint64) size);
     }
 }
 
@@ -460,7 +460,7 @@ void MainWindow::init()
     QApplication::setStyle("plastique");
 
     // create widgets
-    hexEdit  = new QHexEdit;
+    hexEdit  = new HexEdit;
     hexEdit->setMinimumWidth(300);
     hexEdit->setMinimumHeight(300);
 

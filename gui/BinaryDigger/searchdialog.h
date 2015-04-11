@@ -3,7 +3,8 @@
 
 #include <QDialog>
 #include <QtCore>
-#include "qhexedit2/qhexedit.h"
+
+#include "hexedit/hexedit.h"
 
 namespace Ui {
     class SearchDialog;
@@ -13,7 +14,7 @@ class SearchDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit SearchDialog(QHexEdit *hexEdit, QWidget *parent = 0);
+    explicit SearchDialog(HexEdit *hexEdit, QWidget *parent = 0);
     ~SearchDialog();
     int findNext();
     Ui::SearchDialog *ui;
@@ -27,7 +28,7 @@ private:
     QByteArray getContent(int comboIndex, const QString &input);
     int replaceOccurrence(int idx, const QByteArray &replaceBa);
 
-    QHexEdit *_hexEdit;
+    HexEdit *_hexEdit;
 };
 
 #endif // SEARCHDIALOG_H
