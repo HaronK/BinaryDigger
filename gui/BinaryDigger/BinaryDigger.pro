@@ -21,9 +21,7 @@ HEADERS     = \
     FileTemplBlob.h \
     syntaxhighlighter.h \
     scripteditor.h \
-    hexedit/hexedit1.h \
-    hexedit/hexedit2.h \
-    hexedit/hexedit.h
+    hexedit/*.h
 
 #HEXEDIT_SRC = qhexedit2/*.cpp
 HEXEDIT_SRC = ../../external/QHexEdit_Dax89/*.cpp
