@@ -16,6 +16,10 @@ Scripter (script based plugin) is also dynamic library which loads external scri
 
 In current state Gui supports only view mode for data file.
 
+## Compilation
+
+See [COMPILE](COMPILE.md) document.
+
 ## Screenshots
 
 ![Compiled plugin](images/BinaryDigger1.png "Compiled plugin")

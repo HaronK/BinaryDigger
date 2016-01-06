@@ -1,7 +1,7 @@
 /*
  * property.h
  *
- *  Created on: 25 жовт. 2014
+ *  Created on: 25 April 2014
  *      Author: oleg
  */
 
@@ -16,7 +16,7 @@
 #include <string>
 #include <map>
 #include <string.h>
-#include <boost/endian/conversion.hpp>
+#include <boost_endian/include/boost/endian/conversion.hpp>
 #include <boost/any.hpp>
 #include <boost/format.hpp>
 

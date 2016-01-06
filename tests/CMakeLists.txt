@@ -1,11 +1,12 @@
 
 enable_testing()
 
-file(GLOB tests "*.cpp")
+file(GLOB tests "*Test.cpp")
 foreach(test_file ${tests})
     get_filename_component(test_name ${test_file} NAME_WE)
     add_executable(${test_name} ${test_file})
-    target_link_libraries(${test_name} PocoFoundation bd_utils lua)
+    #target_link_libraries(${test_name} PocoFoundation)
+    target_link_libraries(${test_name} bd_utils lua dl ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
     
     add_test(NAME bd_${test_name} COMMAND ${test_name})
     

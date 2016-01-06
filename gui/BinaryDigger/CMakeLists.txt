@@ -11,8 +11,6 @@ qt5_add_resources(UI_RESOURCES
     BinaryDigger.qrc
 )
 
-#file(GLOB QT_HEXEDIT_SRC "qhexedit2/*.cpp")
-
 #set(HEXEDIT QHexEdit_Dax89)
 set(HEXEDIT qhexedit)
 

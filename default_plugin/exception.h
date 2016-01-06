@@ -1,14 +1,14 @@
 /*
  * exception.h
  *
- *  Created on: 25 жовт. 2014
+ *  Created on: 25 April 2014
  *      Author: oleg
  */
 
 #ifndef EXCEPTION_H_
 #define EXCEPTION_H_
 
-#include <Poco/Format.h>
+#include <cppformat/format.h>
 
 class BlockTemplException : public std::exception
 {
@@ -43,7 +43,7 @@ private:
 };
 
 #define bd_throw(msg)        throw BlockTemplException(msg)
-#define bd_throw_f(msg, ...) bd_throw(Poco::format(msg, __VA_ARGS__))
+#define bd_throw_f(msg, ...) bd_throw(fmt::format(msg, __VA_ARGS__))
 
 #define bd_require_true(cond, msg)  if (!(cond)) bd_throw(msg)
 #define bd_require_false(cond, msg) if (cond) bd_throw(msg)

@@ -1,7 +1,7 @@
 /*
  * block_templ.h
  *
- *  Created on: 25 жовт. 2014
+ *  Created on: 25 April 2014
  *      Author: oleg
  */
 

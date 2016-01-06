@@ -5,32 +5,17 @@
  *      Author: oleg
  */
 
-#include <Poco/Util/Application.h>
-#include <Poco/Util/Option.h>
-#include <Poco/Util/OptionSet.h>
-#include <Poco/Util/HelpFormatter.h>
-#include <Poco/Util/AbstractConfiguration.h>
-#include <Poco/AutoPtr.h>
-#include <Poco/SharedLibrary.h>
-#include <Poco/Exception.h>
-
 #include <bd.h>
 #include "../utils/default_block_io.h"
+#include "../utils/plugin_library.h"
 
 #include <iostream>
 #include <boost/program_options.hpp>
 #include <boost/scope_exit.hpp>
 
-namespace po = boost::program_options;
+#include <cppformat/format.h>
 
-using Poco::Util::Application;
-using Poco::Util::Option;
-using Poco::Util::OptionSet;
-using Poco::Util::HelpFormatter;
-using Poco::Util::AbstractConfiguration;
-using Poco::Util::OptionCallback;
-using Poco::SharedLibrary;
-using Poco::AutoPtr;
+namespace po = boost::program_options;
 
 
 // ---------------------------------------------------------------------------------------
@@ -40,7 +25,7 @@ using Poco::AutoPtr;
     if (!BD_SUCCEED(res)) {\
         char buf[1024]; \
         plugin.result_message(res, (bd_string) buf, sizeof(buf)); \
-        _errorMessage = Poco::format("Error:\n  %s\n  %s", std::string(msg), std::string(buf)); \
+        _errorMessage = fmt::format("Error:\n  {0}\n  {1}", msg, buf); \
         return res; \
     } }
 
@@ -49,19 +34,20 @@ using Poco::AutoPtr;
     if (!BD_SUCCEED(res)) {\
         char buf[1024]; \
         plugin.result_message(res, (bd_string) buf, sizeof(buf)); \
-        std::string err_msg = Poco::format(msg, __VA_ARGS__); \
-        _errorMessage = Poco::format("Error:\n  %s\n  %s", err_msg, std::string(buf)); \
+        std::string err_msg = fmt::format(msg, __VA_ARGS__); \
+        _errorMessage = fmt::format("Error:\n  {0}\n  {1}", err_msg, buf); \
         return res; \
     } }
 
-/*
-static bool parse_options(int argc, char **argv, bool& toOpaque, std::string& value)
+static bool parse_options(int argc, char **argv)
 {
     // Declare the supported options.
     po::options_description generic_options("USAGE: dumptree [OPTIONS] file1 [file2]\nAllowed options");
     generic_options.add_options()
-        ("help,h", "Show this help message.")
-        ("to,t",   "Convert formula value to opaque.")
+        ("help,h",        "Show this help message.")
+        ("plugin-dir,P",  "Specify plugins folder.")
+        ("plugin-info,i", "Show plugin info.")
+        ("config-file,f", "Load configuration data from a file.")
     ;
 
     po::options_description visible_options;
@@ -69,15 +55,15 @@ static bool parse_options(int argc, char **argv, bool& toOpaque, std::string& va
 
     po::options_description hidden_options("Hidden options");
     hidden_options.add_options()
-        ("value", po::value<std::string>(), "Opaque that should be converted to normal value or formula which "
-                                            "result should be converted to opaque.")
+        ("plugin", po::value<std::string>(), "Plugin path.")
+        ("script", po::value<std::string>(), "Script file path.")
     ;
 
     po::options_description cmdline_options;
     cmdline_options.add(visible_options).add(hidden_options);
 
     po::positional_options_description positional_options;
-    positional_options.add("value", 1);
+    positional_options.add("plugin", 1).add("script", 1);
 
     po::parsed_options parsed = po::command_line_parser(argc, argv)
                             .options(cmdline_options)
@@ -111,6 +97,7 @@ static bool parse_options(int argc, char **argv, bool& toOpaque, std::string& va
     return true;
 }
 
+/*
 int main(int argc, char *argv[])
 {
     bool toOpaque = false;
@@ -178,25 +165,6 @@ public:
     }
 
 protected:
-    void initialize(Application& self)
-    {
-        loadConfiguration(); // load default configuration files, if present
-        Application::initialize(self);
-        // add your own initialization code here
-    }
-
-    void uninitialize()
-    {
-        // add your own uninitialization code here
-        Application::uninitialize();
-    }
-
-    void reinitialize(Application& self)
-    {
-        Application::reinitialize(self);
-        // add your own reinitialization code here
-    }
-
     void defineOptions(OptionSet& options)
     {
         Application::defineOptions(options);
@@ -321,7 +289,8 @@ protected:
     // ------------------------------------------------------------------------------
     struct PluginInfo
     {
-        std::string pluginName;
+        plugin_library pl;
+        std::string pluginNa;
         bd_plugin plugin;
         bool isScripter;
         std::vector<std::string> templates;

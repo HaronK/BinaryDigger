@@ -1,18 +1,20 @@
 
 # ----------------------------------------------------------------------------------------
 
-# Lua
-find_package(Lua REQUIRED)
+find_package(Lua REQUIRED) # QUIET)
+
+#message("CMAKE_PREFIX_PATH: " $CMAKE_PREFIX_PATH)
 
 if(NOT LUA_FOUND)
-    message(FATAL_ERROR "Cannot find Lua package")
+    message(WARNING "Cannot find Lua package. Lua scripter will not be generated.")
+    return()
 endif()
 
-# Luabind
-find_package(Luabind REQUIRED)
+find_package(Luabind QUIET)
 
 if(NOT LUABIND_FOUND)
-    message(FATAL_ERROR "Cannot find Luabind package")
+    message(WARNING "Cannot find Luabind package. Lua scripter will not be generated.")
+    return()
 endif()
 
 #message("LUABIND_DEFINITIONS:  ${LUABIND_DEFINITIONS}")
@@ -28,7 +30,7 @@ foreach(plugin_file ${plugins})
     get_filename_component(plugin_name ${plugin_file} NAME_WE)
     add_library(${plugin_name} SHARED ${plugin_file})
     
-    target_link_libraries(${plugin_name} PocoFoundation)
+    #target_link_libraries(${plugin_name} PocoFoundation)
     
     add_dependencies(${plugin_name} bd_default_plugin)
     target_link_libraries(${plugin_name} ${bd_default_plugin_FORCE_LINK})

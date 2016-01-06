@@ -5,7 +5,7 @@ foreach(plugin_file ${plugins})
     add_library(${plugin_name} SHARED ${plugin_file})
     #add_library(${plugin_name}_s STATIC ${plugin_file})
     
-    target_link_libraries(${plugin_name} PocoFoundation)
+    #target_link_libraries(${plugin_name} PocoFoundation)
     
     add_dependencies(${plugin_name} bd_default_plugin)
     target_link_libraries(${plugin_name} ${bd_default_plugin_FORCE_LINK})

@@ -16,3 +16,9 @@
 [submodule "external/qhexedit"]
 	path = external/qhexedit
 	url = https://github.com/amaterasu-/QHexEdit
+[submodule "external/cppformat"]
+	path = external/cppformat
+	url = https://github.com/cppformat/cppformat
+[submodule "external/boost.dll"]
+	path = external/boost.dll
+	url = https://github.com/apolukhin/boost.dll

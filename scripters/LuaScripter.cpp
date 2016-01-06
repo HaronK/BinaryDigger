@@ -9,8 +9,7 @@
 #include <map>
 #include <algorithm>
 #include <iostream>
-#include <boost/format.hpp>
-#include <boost/algorithm/string.hpp>
+
 extern "C" {
 #include <lua.h>
 #include <lualib.h>
@@ -21,6 +20,11 @@ extern "C" {
 
 #include <default_plugin.h>
 #include <demangle.h>
+
+#include <cppformat/format.h>
+
+//#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
@@ -54,9 +58,9 @@ string tostring(const luabind::object& obj, const string& indent = "")
     case LUA_TLIGHTUSERDATA:
         return "<lighuserdata>";
     case LUA_TNUMBER:
-        return Poco::format("%f", luabind::object_cast<double>(obj));
+        return fmt::format("{0}", luabind::object_cast<double>(obj));
     case LUA_TSTRING:
-        return Poco::format("\"%s\"", luabind::object_cast<string>(obj));
+        return fmt::format("\"{0}\"", luabind::object_cast<string>(obj));
     case LUA_TTABLE:
     {
         stringstream buf;
@@ -75,12 +79,12 @@ string tostring(const luabind::object& obj, const string& indent = "")
 //    {
 ////        auto templ = (LuaTempl*) luabind::touserdata<BlockTemplBase>(obj);
 //        auto templ = luabind::object_cast<BlockTemplBase>(obj);
-//        return Poco::format("%s::%s", string(templ.type_name), string(templ.name));
+//        return fmt::format("{0}::{1}", string(templ.type_name), string(templ.name));
 //    }
     case LUA_TTHREAD:
         return "<thread>";
     default:
-        return Poco::format("<unknown:%d>", luabind::type(obj));
+        return fmt::format("<unknown:{0}>", luabind::type(obj));
     }
 }
 

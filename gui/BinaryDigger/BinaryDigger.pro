@@ -9,7 +9,6 @@ FORMS       = \
 #HEXEDIT = QHexEdit_Dax89
 HEXEDIT = qhexedit
 
-#HEXEDIT_HDR = qhexedit2/*.h
 HEXEDIT_HDR = ../../external/$$HEXEDIT/*.h
 
 HEADERS     = \
@@ -26,7 +25,6 @@ HEADERS     = \
     scripteditor.h \
     hexedit/*.h
 
-#HEXEDIT_SRC = qhexedit2/*.cpp
 HEXEDIT_SRC = ../../external/$$HEXEDIT/*.cpp
 
 SOURCES     = \

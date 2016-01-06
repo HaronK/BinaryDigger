@@ -19,9 +19,9 @@ SearchDialog::~SearchDialog()
 
 int SearchDialog::findNext()
 {
-    int from = _hexEdit->cursorPosition();
+    auto from = _hexEdit->cursorPos();
     QByteArray findBa = getContent(ui->cbFindFormat->currentIndex(), ui->cbFind->currentText());
-    int idx = -1;
+    qint64 idx = -1;
 
     if (findBa.length() > 0)
     {
